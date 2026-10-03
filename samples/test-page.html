@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>lite browser test 插件接口自检页</title>
+<style>
+  body { font: 14px "Microsoft YaHei UI", sans-serif; margin: 24px; }
+  h2 { color: #003C74; }
+  pre { background: #F5F5F5; border: 1px solid #CCC; padding: 10px; }
+</style>
+</head>
+<body>
+<h2>lite browser test 插件接口自检页</h2>
+<p>本页面用于验证 Chrome 扩展与油猴脚本是否注入成功。</p>
+<pre id="result">检测中…</pre>
+<script>
+function check() {
+  var lines = [];
+  // 注意：Chrome 扩展的内容脚本运行在隔离环境中，页面拿不到它定义的全局变量，
+  // 因此这里通过 DOM 元素判断扩展是否注入（这也正是 Chrome 的标准行为）。
+  lines.push('Chrome 扩展注入：' + (document.getElementById('lb-ext-demo-banner') ? '成功 ✅' : '未生效 ❌'));
+  lines.push('油猴脚本注入：' + (window.__lbUserscriptDemo ? '成功 ✅' : '未生效 ❌'));
+  if (window.__lbUserscriptDemo) {
+    lines.push('  累计运行次数：' + window.__lbUserscriptDemo.runs);
+    lines.push('  GM API 可用：' + window.__lbUserscriptDemo.hasGM);
+    lines.push('  GM_xmlhttpRequest 状态：' + window.__lbUserscriptDemo.xhrStatus);
+    lines.push('  GM_xmlhttpRequest 字节数：' + window.__lbUserscriptDemo.xhrLength);
+  }
+  lines.push('横幅元素：扩展=' + !!document.getElementById('lb-ext-demo-banner') +
+             '，脚本=' + !!document.getElementById('lb-userscript-demo'));
+  lines.push('地址：' + location.href);
+  document.getElementById('result').textContent = lines.join('\n');
+}
+setTimeout(check, 8000);
+</script>
+</body>
+</html>
