@@ -214,10 +214,10 @@ liulanqi/
 
 ## 六、使用方式
 
-### 1. 使用安装包安装（推荐，适合分发）
+### 1. 使用安装包安装
 
 ```
-D:\dshStar\lite browser-1.1.0086-安装程序.exe     （141.6 MB）
+lite browser-1.1.0086-安装程序.exe     （141.6 MB）
 ```
 
 双击运行向导即可安装：
@@ -236,7 +236,7 @@ D:\dshStar\lite browser-1.1.0086-安装程序.exe     （141.6 MB）
 rem 可选：/NODESKTOP /NOSTARTMENU /NORUN
 ```
 
-另有免安装的 `lite browser-1.1.0086-便携版.zip`，解压后双击 `lite browser.exe` 即可使用。
+另有免安装的 `lite browser-1.1.0086-.zip`，解压后双击 `lite browser.exe` 即可使用。
 
 ### 2. 直接运行打包好的程序
 
@@ -352,7 +352,7 @@ QtWebEngine 引擎下可用软件渲染启动：`"lite browser.exe" --disable-gp
 ### 1.0.test（测试版）
 
 在稳定版 1.1.0086 基础上新增**插件系统**，包名改为 **lite browser test**，
-全部文件位于 `D:\dshStar\lite browser test`。
+全部文件位于 `lite browser test`。
 
 1. **新增 Chrome 扩展接口**（`extensions.py`）：按 Chrome 扩展规范加载已解压扩展
    （Manifest V2/V3、`_locales` 本地化、权限解析），支持从文件夹 / `.crx` / `.zip` 安装，
@@ -377,7 +377,7 @@ QtWebEngine 引擎下可用软件渲染启动：`"lite browser.exe" --disable-gp
 * 新增 Windows 安装包：单文件安装程序（141.6 MB，压缩自 321.5 MB），
   带安装向导、快捷方式、控制面板卸载项与独立卸载程序；
   支持 `/S` 静默安装与 `/DIR=` 指定目录；同时提供免安装便携版 zip。
-  安装包位置：`D:\dshStar\lite browser-1.1.0086-安装程序.exe`
+  安装包位置：`lite browser-1.1.0086-.exe`
 
 ### 1.1.0086
 
@@ -415,3 +415,7 @@ QtWebEngine 引擎下可用软件渲染启动：`"lite browser.exe" --disable-gp
    现改为保存所属视图引用，搜索结果、`window.open()`、右键新标签页均可正常打开。
 2. 关于信息中的版权年份改为 **2026**。
 3. 新增命令行网址参数。
+
+Development Note
+The skeleton code, calculation module, debug and file management parts of this project are assisted by DeepSeek Harness.
+The overall conception, XP-style UI design, function planning, code integration and manual modification are completed independently by the author.
