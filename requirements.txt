@@ -1,0 +1,4 @@
+PySide6==6.8.3
+# Windows 下使用 Edge WebView2 内核（可播放 H.264/AAC 视频，如哔哩哔哩）
+# 缺少 pythonnet 时程序会自动回退到 QtWebEngine 内核
+pythonnet>=3.0.5 ; sys_platform == "win32"
