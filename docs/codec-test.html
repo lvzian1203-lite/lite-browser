@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>lite browser H.264/AAC 播放测试</title>
+<style>
+  body { font: 14px "Microsoft YaHei", sans-serif; margin: 12px; }
+  video { background: #000; border: 1px solid #888; }
+  #s { font: 13px Consolas, monospace; background: #F5F5F5; padding: 8px; border: 1px solid #CCC; }
+</style>
+</head>
+<body>
+<h2>H.264 / AAC 播放测试</h2>
+<video id="v" autoplay muted controls width="720"
+       src="https://www.w3schools.com/html/mov_bbb.mp4"></video>
+<pre id="s">检测中...</pre>
+<script>
+function tick() {
+  var v = document.getElementById('v');
+  var t = document.createElement('video');
+  var m = document.createElement('video');
+  document.getElementById('s').textContent =
+    'currentTime = ' + v.currentTime.toFixed(2) + ' 秒\n' +
+    'readyState  = ' + v.readyState + '   paused = ' + v.paused + '\n' +
+    'error       = ' + (v.error ? (v.error.code + ' / ' + v.error.message) : 'null') + '\n' +
+    'canPlay H264= ' + (t.canPlayType('video/mp4; codecs="avc1.42E01E"') || 'no') + '\n' +
+    'canPlay AAC = ' + (m.canPlayType('audio/mp4; codecs="mp4a.40.2"') || 'no') + '\n' +
+    'MSE  H264   = ' + ((window.MediaSource && MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E"')) ? 'YES' : 'NO') + '\n' +
+    'MSE  AAC    = ' + ((window.MediaSource && MediaSource.isTypeSupported('audio/mp4; codecs="mp4a.40.2"')) ? 'YES' : 'NO');
+}
+setInterval(tick, 400);
+tick();
+</script>
+</body>
+</html>

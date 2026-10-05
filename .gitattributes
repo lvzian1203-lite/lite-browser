@@ -1,0 +1,18 @@
+# 默认按文本处理，仓库内统一使用 LF（Windows 下的 bat 保持 CRLF）
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 二进制文件不做行尾转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.wasm binary
+*.dll binary
+*.exe binary
+*.zip binary
+*.pyc binary
+*.ttf binary
