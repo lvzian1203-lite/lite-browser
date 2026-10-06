@@ -1,0 +1,39 @@
+name: tests
+
+# 在 Pull Request 与 main 分支推送时运行。
+# 项目依赖 Windows 专有组件（WebView2、DPAPI、ctypes.windll），因此跑在 windows 运行器上。
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install cryptography   # 可选依赖：装上以便测试加密路径
+          pip install pytest ruff
+
+      - name: 代码检查（只查语法错误 / 未定义名等硬问题）
+        run: ruff check litebrowser tests
+
+      - name: 运行单元测试
+        env:
+          LITE_BROWSER_DATA_DIR: ${{ runner.temp }}\litebrowser-tests
+        run: python -m pytest tests -v

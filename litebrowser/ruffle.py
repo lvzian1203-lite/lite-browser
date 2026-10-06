@@ -18,9 +18,15 @@ from __future__ import annotations
 
 import html
 import json
+import logging
+import secrets
+import threading
+import time
 from pathlib import Path
 
 from .config import APP_NAME, APP_VERSION, resource_path
+
+log = logging.getLogger(__name__)
 
 #: 虚拟域名：网页从这里加载 Ruffle（由内核层拦截并返回本地文件）
 SCHEME = "https"
@@ -94,10 +100,14 @@ def config_dict(*, enable: bool = True) -> dict:
     }
 
 
-def bootstrap_script(public_path: str = "", config_json: str = "") -> str:
-    """注入到每个页面的引导脚本：配置 Ruffle 并加载它。"""
+def bootstrap_script(public_path: str = "", config_json: str = "", token: str = "") -> str:
+    """注入到每个页面的引导脚本：配置 Ruffle 并加载它。
+
+    ``token`` 会写进页面里的 .swf 地址改写逻辑，代理只接受带该 token 的请求。
+    """
     path = public_path or PUBLIC_PATH
     config = config_json or json.dumps(config_dict(), ensure_ascii=False)
+    token_js = json.dumps(token or "")
     return f"""
 (function () {{
   try {{
@@ -105,6 +115,7 @@ def bootstrap_script(public_path: str = "", config_json: str = "") -> str:
     window.__liteRuffleLoading = true;
     var PUBLIC = {json.dumps(path)};
     var EXTRA = {config};
+    var TOKEN = {token_js};
     window.RufflePlayer = window.RufflePlayer || {{}};
     var base = window.RufflePlayer.config || {{}};
     for (var key in EXTRA) {{ if (!(key in base)) base[key] = EXTRA[key]; }}
@@ -124,7 +135,8 @@ def bootstrap_script(public_path: str = "", config_json: str = "") -> str:
         if (!/^https?:\\/\\//i.test(target)) {{
           target = new URL(target, location.href).href;
         }}
-        return PUBLIC + 'proxy?url=' + encodeURIComponent(target);
+        return PUBLIC + 'proxy?token=' + encodeURIComponent(TOKEN)
+          + '&url=' + encodeURIComponent(target);
       }} catch (e) {{ return target; }}
     }}
     var ATTRS = ['src', 'data', 'movie'];
@@ -175,11 +187,11 @@ def bootstrap_script(public_path: str = "", config_json: str = "") -> str:
 """.strip()
 
 
-def swf_page(swf_url: str) -> str:
+def swf_page(swf_url: str, token: str = "") -> str:
     """为直接打开的 .swf 生成播放页。"""
     path = PUBLIC_PATH
-    safe_url = html.escape(swf_url, quote=True)
-    play_url = proxy_url(swf_url) if swf_url.lower().startswith(("http://", "https://")) else swf_url
+    play_url = (proxy_url(swf_url, token)
+                if swf_url.lower().startswith(("http://", "https://")) else swf_url)
     from urllib.parse import unquote, urlsplit
 
     try:
@@ -232,19 +244,19 @@ def swf_page(swf_url: str) -> str:
 """
 
 
-def write_swf_page(swf_url: str) -> Path:
+def write_swf_page(swf_url: str, token: str = "") -> Path:
     """把 .swf 播放页写到数据目录并返回路径。"""
     from .config import data_dir
 
     folder = data_dir() / "pages"
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / "swf-player.html"
-    path.write_text(swf_page(swf_url), encoding="utf-8")
+    path.write_text(swf_page(swf_url, token), encoding="utf-8")
     return path
 
 
-def swf_page_url(swf_url: str) -> str:
-    return write_swf_page(swf_url).as_uri()
+def swf_page_url(swf_url: str, token: str = "") -> str:
+    return write_swf_page(swf_url, token).as_uri()
 
 
 def is_swf_url(url: str) -> bool:
@@ -253,28 +265,112 @@ def is_swf_url(url: str) -> bool:
     return text.endswith(".swf")
 
 
-def proxy_url(target: str) -> str:
-    """把外部 .swf 地址包装成由本程序代取的地址（解决跨域取不到的问题）。"""
+def proxy_url(target: str, token: str = "") -> str:
+    """把外部 .swf 地址包装成由本程序代取的地址（解决跨域取不到的问题）。
+
+    ``token`` 是本次 Ruffle 播放会话的授权凭据，缺少它代理会拒绝服务。
+    """
     from urllib.parse import quote
 
-    return f"{PUBLIC_PATH}proxy?url={quote(target, safe='')}"
+    query = f"url={quote(target, safe='')}"
+    if token:
+        query = f"token={quote(token, safe='')}&{query}"
+    return f"{PUBLIC_PATH}proxy?{query}"
 
 
 def is_proxy_url(url: str) -> bool:
     return "ruffle.litebrowser.local/proxy" in (url or "")
 
 
-def unproxy_target(url: str) -> str:
-    """从代理地址还原目标地址。"""
+def parse_proxy_request(url: str) -> tuple[str, str]:
+    """解析代理请求，返回 (目标地址, token)。"""
     from urllib.parse import parse_qs, unquote, urlsplit
 
     try:
         query = urlsplit(url).query
     except ValueError:
-        return ""
+        return "", ""
     params = parse_qs(query)
-    value = (params.get("url") or [""])[0]
-    return unquote(value)
+    target = unquote((params.get("url") or [""])[0])
+    token = (params.get("token") or [""])[0]
+    return target, token
+
+
+def unproxy_target(url: str) -> str:
+    """从代理地址还原目标地址。"""
+    return parse_proxy_request(url)[0]
+
+
+# --------------------------------------------------------------------------- #
+# Ruffle 播放会话授权
+# --------------------------------------------------------------------------- #
+class RuffleSessions:
+    """为每个 Ruffle 播放会话发放不可预测的随机 token。
+
+    代理接口不再把 Referer 当作唯一授权依据（Referer 可被伪造/省略），
+    改为要求请求携带本进程发放、且与会话绑定的 token：
+
+    * token 由 ``secrets.token_urlsafe`` 生成，不可预测；
+    * 带过期时间，过期或超过会话上限即失效；
+    * 页面导航离开 / 标签页关闭时主动 revoke；
+    * 不写入历史记录与配置（内置页面地址不参与历史记录）。
+    """
+
+    #: token 有效期（秒）
+    TTL_SECONDS = 30 * 60
+    #: 同时存在的会话上限（超出时淘汰最早的）
+    MAX_SESSIONS = 128
+
+    def __init__(self) -> None:
+        self._tokens: dict[str, float] = {}
+        self._lock = threading.Lock()
+
+    def create(self) -> str:
+        token = secrets.token_urlsafe(32)
+        now = time.time()
+        with self._lock:
+            self._purge_locked(now)
+            while len(self._tokens) >= self.MAX_SESSIONS:
+                oldest = min(self._tokens, key=lambda key: self._tokens[key])
+                self._tokens.pop(oldest, None)
+            self._tokens[token] = now + self.TTL_SECONDS
+        return token
+
+    def valid(self, token: str) -> bool:
+        if not token:
+            return False
+        now = time.time()
+        with self._lock:
+            expiry = self._tokens.get(token)
+            if expiry is None:
+                return False
+            if expiry < now:
+                self._tokens.pop(token, None)
+                return False
+            return True
+
+    def revoke(self, token: str) -> None:
+        if not token:
+            return
+        with self._lock:
+            self._tokens.pop(token, None)
+
+    def revoke_all(self) -> None:
+        with self._lock:
+            self._tokens.clear()
+
+    def count(self) -> int:
+        with self._lock:
+            return len(self._tokens)
+
+    def _purge_locked(self, now: float) -> None:
+        expired = [key for key, expiry in self._tokens.items() if expiry < now]
+        for key in expired:
+            self._tokens.pop(key, None)
+
+
+#: 全局会话表（跨标签页共享，token 与会话一一对应）
+SESSIONS = RuffleSessions()
 
 
 #: 代理取回的最大体积（防止被超大文件拖死）
@@ -282,78 +378,50 @@ MAX_PROXY_BYTES = 64 * 1024 * 1024
 
 
 def _host_is_private(host: str) -> bool:
-    """拒绝代理到本机 / 内网地址，避免被网页当成 SSRF 跳板。"""
-    import ipaddress
-    import socket
+    """兼容旧调用：判断主机是否解析到非公网地址。
 
-    name = (host or "").strip().lower()
-    if not name:
-        return True
-    if name in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
-        return True
-    try:
-        infos = socket.getaddrinfo(name, None)
-    except OSError:
-        return False
-    for info in infos:
-        try:
-            address = ipaddress.ip_address(info[4][0])
-        except ValueError:
-            continue
-        if (address.is_private or address.is_loopback or address.is_link_local
-                or address.is_reserved or address.is_multicast):
-            return True
-    return False
+    真正的校验在 :mod:`litebrowser.safefetch` 里完成（含逐跳重校验与 IP 钉住），
+    这里只作为对外的辅助判断保留。
+    """
+    from .safefetch import is_public_host
+
+    return not is_public_host(host)
+
+
+def _is_swf_content(body: bytes, _content_type: str) -> bool:
+    """校验取回的内容确实是 SWF（防止拿到防盗链的 HTML 页面）。"""
+    return len(body) >= 8 and body[:3] in (b"FWS", b"CWS", b"ZWS")
 
 
 def fetch_swf(target: str, referer: str = "") -> tuple[bytes, str] | None:
-    """代取外部 .swf，返回 (内容, MIME)；失败返回 None。
+    """代取外部 .swf，返回 (内容, MIME)；被拒绝或失败返回 None。
 
-    只允许 http/https 且路径以 .swf 结尾的地址，并拒绝内网主机，
-    这样即使被恶意网页调用也无法访问本地服务。
+    安全策略全部交由 :func:`litebrowser.safefetch.fetch` 执行：
+    只允许 http/https、逐跳校验解析地址、连接钉住已验证 IP、
+    最多 5 次跳转、限制响应体积；这里再要求内容必须是合法 SWF。
     """
-    import urllib.error
-    import urllib.parse
-    import urllib.request
+    from .safefetch import FetchError, fetch
 
-    try:
-        parts = urllib.parse.urlsplit(target)
-    except ValueError:
-        return None
-    if parts.scheme not in ("http", "https"):
-        return None
     if not is_swf_url(target):
+        log.info("Ruffle 代理拒绝：不是 .swf 地址（%s）", target[:120])
         return None
-    if _host_is_private(parts.hostname or ""):
-        return None
-
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36"
-        ),
-        "Accept": "*/*",
-        "Accept-Language": "zh-CN,zh;q=0.9",
-    }
-    if referer and referer.startswith(("http://", "https://")):
-        headers["Referer"] = referer
-    else:
-        headers["Referer"] = f"{parts.scheme}://{parts.netloc}/"
     try:
-        request = urllib.request.Request(target, headers=headers)
-        with urllib.request.urlopen(request, timeout=30) as response:
-            if response.status != 200:
-                return None
-            data = response.read(MAX_PROXY_BYTES + 1)
-            if len(data) > MAX_PROXY_BYTES:
-                return None
-            mime = response.headers.get("Content-Type") or "application/x-shockwave-flash"
-    except (urllib.error.URLError, OSError, ValueError):
+        result = fetch(
+            target,
+            referer=referer,
+            max_bytes=MAX_PROXY_BYTES,
+            validator=_is_swf_content,
+        )
+    except FetchError as exc:
+        log.warning("Ruffle 代取被拒绝或失败：%s（%s）", exc, target[:120])
         return None
-    if len(data) < 8 or data[:3] not in (b"FWS", b"CWS", b"ZWS"):
-        # 不是合法的 SWF（可能是防盗链返回的 HTML）
+    except Exception:  # noqa: BLE001 - 未预期异常需要记录，不能静默
+        log.exception("Ruffle 代取出现未预期异常：%s", target[:120])
         return None
-    return data, mime
+    mime = result.content_type or "application/x-shockwave-flash"
+    if result.redirects:
+        log.info("Ruffle 代取完成：%s 次跳转，%d 字节", result.redirects, len(result.body))
+    return result.body, mime
 
 
 def supports_current_engine(engine_id: str) -> bool:

@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
 )
 
 from . import icons, theme
+from . import netsec as security
 from .config import (
     APP_NAME,
     APP_VERSION,
@@ -763,7 +764,9 @@ class SettingsDialog(XPDialog):
         start_box = QGroupBox("启动与加载")
         start_layout = QVBoxLayout(start_box)
         self.check_restore_session = QCheckBox("启动时恢复上次关闭时的标签页")
-        self.check_preload = QCheckBox("预读取当前网页中的链接（加快点击速度）")
+        self.check_preload = QCheckBox(
+            "预读取当前网页中的链接（DNS 预解析 / 预连接，默认关闭）"
+        )
         self.check_smooth_scroll = QCheckBox("开启平滑滚动")
         self.check_images = QCheckBox("加载网页图片（关闭可显著提速省流量）")
         for widget in (
@@ -773,6 +776,17 @@ class SettingsDialog(XPDialog):
             self.check_images,
         ):
             start_layout.addWidget(widget)
+
+        # 明确隐私影响：这不是纯粹的"性能优化"
+        preload_hint = QLabel(
+            "注意：开启「预读取链接」后，浏览器会提前对页面中链接的域名发起 "
+            "DNS 查询或网络连接（dns-prefetch / preconnect），"
+            "因此这些域名可能在你实际点击之前就知道你访问过当前页面。"
+            "该选项默认关闭。"
+        )
+        preload_hint.setWordWrap(True)
+        preload_hint.setProperty("role", "hint")
+        start_layout.addWidget(preload_hint)
         layout.addWidget(start_box)
 
         stats_box = QGroupBox("运行状态")
@@ -910,9 +924,9 @@ class SettingsDialog(XPDialog):
         cert_layout.addWidget(cert_hint)
         layout.addWidget(cert_box)
 
-        safe_box = QGroupBox("恶意网址拦截")
+        safe_box = QGroupBox("可疑网址拦截")
         safe_layout = QVBoxLayout(safe_box)
-        self.check_block = QCheckBox("启用恶意网址拦截（黑名单 + 启发式规则）")
+        self.check_block = QCheckBox("启用可疑网址拦截（黑名单 + 本地启发式规则）")
         safe_layout.addWidget(self.check_block)
         safe_row = QHBoxLayout()
         self.btn_blocklist = QPushButton("管理黑名单(L)...")
@@ -927,6 +941,11 @@ class SettingsDialog(XPDialog):
         self.lbl_blocklist.setWordWrap(True)
         self.lbl_blocklist.setProperty("role", "hint")
         safe_layout.addWidget(self.lbl_blocklist)
+        # 明确能力边界：这是本地启发式规则，不是网址信誉库
+        block_disclaimer = QLabel(security.DISCLAIMER)
+        block_disclaimer.setWordWrap(True)
+        block_disclaimer.setProperty("role", "dim")
+        safe_layout.addWidget(block_disclaimer)
         layout.addWidget(safe_box)
         layout.addStretch(1)
 
@@ -994,8 +1013,11 @@ class SettingsDialog(XPDialog):
         """显示 Ruffle 的版本、体积与当前内核是否支持。"""
         from . import ruffle
 
+        from .engine import capabilities_for
+
         info = ruffle.info()
-        engine_ok = ruffle.supports_current_engine(self.current_engine)
+        # 按能力表判断（P2-2）
+        engine_ok = capabilities_for(self.current_engine).ruffle
         if not info["available"]:
             self.lbl_flash.setText("⚠ 未找到内置的 Ruffle 文件（lib/ruffle），Flash 兼容不可用。")
             self.check_flash.setEnabled(False)
@@ -1788,10 +1810,10 @@ class AdRulesDialog(XPDialog):
 
 
 class BlocklistDialog(XPDialog):
-    """管理恶意网址黑名单 / 白名单。"""
+    """管理可疑网址的黑名单 / 白名单（本地启发式规则的基础名单）。"""
 
     def __init__(self, manager, parent: QWidget | None = None) -> None:
-        super().__init__(parent, title="恶意网址名单", icon_name="warn")
+        super().__init__(parent, title="可疑网址名单", icon_name="warn")
         self.manager = manager
         self.setMinimumSize(520, 460)
 

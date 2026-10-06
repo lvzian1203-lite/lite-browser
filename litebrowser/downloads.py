@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import json
 import os
 import subprocess
@@ -14,6 +16,8 @@ from typing import Callable, Optional
 from PySide6.QtCore import QObject, Signal
 
 from .crypto import DataVault
+
+log = logging.getLogger(__name__)
 
 STATE_PENDING = "pending"
 STATE_RUNNING = "running"
@@ -259,7 +263,9 @@ class DownloadManager(QObject):
         item.finished_at = time.time()
         item.state = STATE_DONE if ok else STATE_FAILED
         item.error = "" if ok else (error or "下载失败")
-        if ok and item.total and not item.received:
+        if ok and item.total:
+            # 下载已成功：进度必须显示 100%，否则界面上会出现
+            # "已完成 / 50%" 这类自相矛盾的状态
             item.received = item.total
         self.save()
         self.updated.emit(item)
@@ -267,7 +273,8 @@ class DownloadManager(QObject):
         if ok:
             try:
                 self.completed.emit(item.filename, str(item.path.parent))
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
 
     def cancel(self, item: DownloadItem) -> None:

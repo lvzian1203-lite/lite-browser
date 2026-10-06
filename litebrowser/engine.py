@@ -10,13 +10,18 @@ lite browser 支持两种 Chromium 内核：
 
 from __future__ import annotations
 
+import logging
+from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Callable, Optional
 
-from PySide6.QtCore import QTimer, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtWidgets import QWidget
 
 from .config import APP_NAME, data_dir
+
+log = logging.getLogger(__name__)
 
 ENGINE_WEBVIEW2 = "webview2"
 ENGINE_QTWEB = "qtwebengine"
@@ -57,8 +62,66 @@ _PREFETCH_JS = r"""
 """
 
 
+class EngineState(StrEnum):
+    """引擎生命周期状态（替代用超时/轮询来"猜"内核是否就绪）。"""
+
+    CREATED = "created"          # 刚创建，尚未开始初始化
+    INITIALIZING = "initializing"  # 正在创建内核对象
+    READY = "ready"              # 可以加载页面
+    FAILED = "failed"            # 初始化失败
+    CLOSING = "closing"          # 正在销毁
+    CLOSED = "closed"            # 已销毁
+
+
+@dataclass(frozen=True)
+class EngineCapabilities:
+    """引擎能力描述：界面按能力判断，而不是到处比较 engine_id。
+
+    这样以后新增第三种内核时，界面代码不需要成片修改。
+    """
+
+    #: 是否支持 Ruffle（本地资源拦截供给）
+    ruffle: bool = False
+    #: 是否含 H.264/AAC 等专有编解码器（影响视频站点）
+    proprietary_codecs: bool = True
+    #: 是否支持另存为 MHTML
+    mhtml: bool = True
+    #: 是否支持导出 PDF
+    pdf: bool = True
+    #: 是否支持 Cookie 枚举与删除
+    cookie_management: bool = True
+    #: 是否支持证书错误接管
+    certificate_management: bool = True
+    #: 是否支持挂起后台标签页
+    suspend: bool = True
+    #: 是否支持设置 User-Agent
+    user_agent: bool = True
+    #: 是否支持开发者工具
+    dev_tools: bool = True
+    #: 是否支持页面内查找
+    find_in_page: bool = True
+
+
+#: 各引擎能力表：界面按能力判断，避免到处比较 engine_id（P2-2）
+ENGINE_CAPABILITIES: dict[str, EngineCapabilities] = {
+    ENGINE_WEBVIEW2: EngineCapabilities(ruffle=True),
+    ENGINE_QTWEB: EngineCapabilities(ruffle=False, proprietary_codecs=False),
+}
+
+
+def capabilities_for(engine_id: str) -> EngineCapabilities:
+    """按引擎 id 取得能力描述（不需要实例化引擎）。
+
+    未知 id 返回保守的默认能力，避免界面崩溃。
+    """
+    return ENGINE_CAPABILITIES.get(engine_id or "", EngineCapabilities())
+
+
 class BrowserEngine(QWidget):
     """一个标签页里的网页视图。"""
+
+    #: 子类覆盖：默认能力
+    capabilities = EngineCapabilities()
 
     url_changed = Signal(str)
     title_changed = Signal(str)
@@ -84,6 +147,8 @@ class BrowserEngine(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        #: 生命周期状态：用明确状态取代"靠超时猜测内核是否就绪"
+        self._state: EngineState = EngineState.CREATED
         #: 由主窗口注入：根据建议文件名返回保存路径，返回 None 表示取消
         self.save_path_provider: Optional[Callable[[str], Optional[str]]] = None
         #: 由主窗口注入：新建一个标签页并返回其引擎（QtWebEngine 的 createWindow 需要）
@@ -95,7 +160,7 @@ class BrowserEngine(QWidget):
         self._pending_url: Optional[str] = None
         #: 正在显示自定义错误页时记录原始网址（地址栏保持显示它）
         self._error_url = ""
-        #: 被拦截的网址（恶意网址警告页）
+        #: 被拦截的网址（可疑网址提示页）
         self._blocked_url = ""
         #: 正在加载内置页面（错误页 / 警告页）
         self._internal_page = False
@@ -115,6 +180,8 @@ class BrowserEngine(QWidget):
         self._ruffle_enabled = False
         self._ruffle_public_path = ""
         self._ruffle_config = ""
+        #: 当前 Ruffle 播放会话 token（文档切换时轮换，标签页关闭即失效）
+        self._ruffle_token = ""
         #: 内部页面（错误页 / 警告页 / .swf 播放页 / 自检页）期间地址栏要显示的网址
         self.address_override = ""
 
@@ -123,8 +190,19 @@ class BrowserEngine(QWidget):
     def engine_label(self) -> str:
         return ENGINE_LABELS.get(self.engine_id, self.engine_id)
 
+    @property
+    def state(self) -> EngineState:
+        """当前生命周期状态。"""
+        return self._state
+
+    def set_state(self, state: EngineState) -> None:
+        """更新状态（子类在初始化/失败/关闭时调用）。"""
+        if state != self._state:
+            log.debug("引擎状态 %s -> %s", self._state, state)
+            self._state = state
+
     def is_ready(self) -> bool:
-        return True
+        return self._state is EngineState.READY
 
     # -- 导航 ------------------------------------------------------------- #
     def load(self, url: str) -> None:  # pragma: no cover - 抽象
@@ -185,7 +263,7 @@ class BrowserEngine(QWidget):
         self.setFocus()
 
     def shutdown(self) -> None:
-        pass
+        self.revoke_ruffle_token()
 
     # -- 用户代理 --------------------------------------------------------- #
     def set_user_agent(self, user_agent: str) -> None:
@@ -228,7 +306,8 @@ class BrowserEngine(QWidget):
             for stale in folder.glob("internal-*.html"):
                 try:
                     stale.unlink()
-                except OSError:
+                except OSError as lite_exc:
+                    log.debug("忽略异常：%s", lite_exc)
                     pass
             self._page_seq = getattr(self, "_page_seq", 0) + 1
             path = folder / f"internal-{self._page_seq}.html"
@@ -257,18 +336,20 @@ class BrowserEngine(QWidget):
         self.error_page_shown.emit(url, code)
 
     def set_warning_page(self, url: str, verdict) -> None:
-        """显示恶意网址警告页。"""
+        """显示可疑网址提示页（本地启发式规则命中）。"""
         from .errors import warning_page
+        from .netsec import DISCLAIMER
         from .theme import current as current_theme
 
         spec = current_theme()
         html = warning_page(
             url,
             getattr(verdict, "reasons", []),
-            title=getattr(verdict, "title", "该网址可能存在风险"),
+            title=getattr(verdict, "title", "该网址命中本地可疑规则"),
             dark=spec.dark,
             accent=spec.highlight,
             app_title=APP_NAME,
+            disclaimer=DISCLAIMER,
         )
         self._error_url = url
         self._blocked_url = url
@@ -361,6 +442,26 @@ class BrowserEngine(QWidget):
         self._ruffle_config = config_json
         self.apply_ruffle()
 
+    def ruffle_token(self) -> str:
+        """取得（必要时创建）当前 Ruffle 播放会话的授权 token。"""
+        from .ruffle import SESSIONS
+
+        if not self._ruffle_token:
+            self._ruffle_token = SESSIONS.create()
+        return self._ruffle_token
+
+    def rotate_ruffle_token(self) -> None:
+        """文档切换时轮换 token：旧 token 立即失效，避免长期有效。"""
+        from .ruffle import SESSIONS
+
+        if self._ruffle_token:
+            SESSIONS.revoke(self._ruffle_token)
+            self._ruffle_token = ""
+
+    def revoke_ruffle_token(self) -> None:
+        """会话结束（标签页关闭 / 引擎销毁）时使 token 失效。"""
+        self.rotate_ruffle_token()
+
     def apply_ruffle(self) -> None:
         """把 Ruffle 引导脚本注入当前页面。"""
         if not getattr(self, "_ruffle_enabled", False):
@@ -370,6 +471,7 @@ class BrowserEngine(QWidget):
         self.run_js(bootstrap_script(
             getattr(self, "_ruffle_public_path", ""),
             getattr(self, "_ruffle_config", ""),
+            self.ruffle_token(),
         ))
 
     # -- 内部命令（错误页/警告页按钮） ------------------------------------ #
@@ -384,35 +486,118 @@ class BrowserEngine(QWidget):
 # --------------------------------------------------------------------------- #
 # 工具
 # --------------------------------------------------------------------------- #
-def await_task(task, on_done, on_error=None, interval: int = 20) -> None:
-    """在 Qt 事件循环中轮询 .NET Task 的完成状态。
+class TaskBridge(QObject):
+    """把 .NET Task 桥接到 Qt 事件循环（P2-3）。
 
-    直接访问 ``task.Result`` 会阻塞主线程，而 WebView2 的异步回调
-    恰恰需要主线程继续跑消息循环，因此必须轮询。
+    WebView2 的异步 API 返回 .NET ``Task``，直接访问 ``task.Result`` 会阻塞主线程，
+    而 WebView2 的回调恰恰需要主线程继续跑消息循环，所以必须轮询等待。
+
+    这个类把「轮询 / 完成 / 失败 / 超时 / 清理」集中到一处，
+    避免每个调用点各自复制一份 ``QTimer`` + ``IsCompleted`` + ``Result`` 逻辑。
     """
-    timer = QTimer()
 
-    def check() -> None:
+    done = Signal(object)      # 任务结果
+    failed = Signal(object)    # 异常对象
+    timeout = Signal()
+
+    #: 默认轮询间隔（毫秒）
+    DEFAULT_INTERVAL = 20
+    #: 默认超时（毫秒）；0 表示不超时
+    DEFAULT_TIMEOUT = 60_000
+
+    #: 存活中的桥接对象（防止被 GC 回收导致回调丢失）
+    _active: set["TaskBridge"] = set()
+
+    def __init__(self, parent: QObject | None = None, *,
+                 interval: int = DEFAULT_INTERVAL,
+                 timeout_ms: int = DEFAULT_TIMEOUT) -> None:
+        super().__init__(parent)
+        self._interval = max(1, int(interval))
+        self._timeout_ms = max(0, int(timeout_ms))
+        self._elapsed = 0
+        self._finished = False
+        self._timer = QTimer(self)
+        self._timer.setInterval(self._interval)
+        self._timer.timeout.connect(self._poll)
+        #: 已连接的回调（保持引用即可，实际连接在 run() 中建立）
+        self._on_done: Callable[[object], None] | None = None
+        self._on_error: Callable[[BaseException], None] | None = None
+
+    # -- 生命周期 --------------------------------------------------------- #
+    def run(self, task, on_done: Callable[[object], None] | None = None,
+            on_error: Callable[[BaseException], None] | None = None,
+            *, timeout_ms: int | None = None) -> "TaskBridge":
+        """开始等待 ``task`` 完成；返回自身（便于保留引用）。"""
+        self._task = task
+        self._on_done = on_done
+        self._on_error = on_error
+        if timeout_ms is not None:
+            self._timeout_ms = max(0, int(timeout_ms))
+        TaskBridge._active.add(self)
+        self._timer.start()
+        return self
+
+    def cancel(self) -> None:
+        """停止等待（不再触发任何回调）。"""
+        self._finished = True
         try:
-            done = bool(task.IsCompleted)
+            self._timer.stop()
+        except Exception as exc:  # noqa: BLE001 - 停止计时器失败不影响清理
+            log.debug("停止 TaskBridge 计时器失败：%s", exc)
+        TaskBridge._active.discard(self)
+
+    def _finish(self, kind: str, payload) -> None:
+        if self._finished:
+            return
+        self._finished = True
+        try:
+            self._timer.stop()
         except Exception as exc:  # noqa: BLE001
-            timer.stop()
-            if on_error is not None:
-                on_error(exc)
+            log.debug("停止 TaskBridge 计时器失败：%s", exc)
+        TaskBridge._active.discard(self)
+        if kind == "done":
+            if self._on_done is not None:
+                self._on_done(payload)  # type: ignore[arg-type]
+            self.done.emit(payload)
+        elif kind == "failed":
+            if self._on_error is not None:
+                self._on_error(payload)  # type: ignore[arg-type]
+            self.failed.emit(payload)
+        else:
+            self.timeout.emit()
+
+    def _poll(self) -> None:
+        task = getattr(self, "_task", None)
+        if task is None:
+            self.cancel()
             return
-        if not done:
+        self._elapsed += self._interval
+        if self._timeout_ms and self._elapsed >= self._timeout_ms:
+            log.warning("等待 .NET Task 超时（%d ms）", self._timeout_ms)
+            self._finish("timeout", None)
             return
-        timer.stop()
+        try:
+            completed = bool(task.IsCompleted)
+        except Exception as exc:  # noqa: BLE001 - 状态读取失败按失败处理
+            self._finish("failed", exc)
+            return
+        if not completed:
+            return
         try:
             if bool(task.IsFaulted):
                 raise RuntimeError(str(task.Exception))
-            on_done(task.Result)
+            self._finish("done", task.Result)
         except Exception as exc:  # noqa: BLE001
-            if on_error is not None:
-                on_error(exc)
+            self._finish("failed", exc)
 
-    timer.timeout.connect(check)
-    timer.start(interval)
+
+def await_task(task, on_done, on_error=None, interval: int = 20,
+               timeout_ms: int | None = None) -> TaskBridge:
+    """兼容旧调用：创建 :class:`TaskBridge` 并开始等待。"""
+    bridge = TaskBridge(interval=interval,
+                        timeout_ms=TaskBridge.DEFAULT_TIMEOUT if timeout_ms is None
+                        else timeout_ms)
+    return bridge.run(task, on_done, on_error, timeout_ms=timeout_ms)
 
 
 # --------------------------------------------------------------------------- #
@@ -426,7 +611,8 @@ def available_engines() -> list[str]:
 
         if wv2engine.is_supported():
             engines.append(ENGINE_WEBVIEW2)
-    except Exception:
+    except Exception as lite_exc:
+        log.debug("忽略异常：%s", lite_exc)
         pass
     engines.append(ENGINE_QTWEB)
     return engines

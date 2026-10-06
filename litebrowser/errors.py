@@ -55,7 +55,7 @@ WEBVIEW2_ERRORS = {
 
 #: 网络错误的中文说明（用 -N 表示 WebView2 的第 N 个错误）
 STATUS_TEXT.update({-key: value for key, value in WEBVIEW2_ERRORS.items() if key})
-STATUS_TEXT[-100] = "已拦截的网址"
+STATUS_TEXT[-100] = "可疑网址（本地规则命中）"
 
 
 def describe(code: int, fallback: str = "") -> tuple[str, str]:
@@ -324,12 +324,17 @@ def warning_page(
     url: str,
     reasons: list,
     *,
-    title: str = "该网址可能存在风险",
+    title: str = "该网址命中本地可疑规则",
     dark: bool = False,
     accent: str = "#C6362B",
     app_title: str = "lite browser",
+    disclaimer: str = "",
 ) -> str:
-    """恶意网址警告页。"""
+    """可疑网址提示页（本地启发式规则命中时显示）。"""
+    if not disclaimer:
+        from .netsec import DISCLAIMER
+
+        disclaimer = DISCLAIMER
     bg = "#1E1E1E" if dark else "#FDF6F5"
     card = "#262626" if dark else "#FFFFFF"
     fg = "#E8E8E8" if dark else "#1F1F1F"
@@ -337,8 +342,9 @@ def warning_page(
     line = "#3A3A3A" if dark else "#EBD3D0"
     url_text = _escape(url)
     title_text = _escape(title)
+    disclaimer_text = _escape(disclaimer)
     items = "".join(
-        f"<li>{_escape(str(item))}</li>" for item in (reasons or ["该网址被判定为可能存在风险"])
+        f"<li>{_escape(str(item))}</li>" for item in (reasons or ["该网址命中了本地可疑规则"])
     )
     url_js = json.dumps(url or "", ensure_ascii=False)
 
@@ -392,16 +398,17 @@ def warning_page(
       <div class="sign">!</div>
       <div style="flex:1">
         <h1>{title_text}</h1>
-        <div>此页面已被 lite browser 的安全防护拦截。请确认您信任该网站后再继续。</div>
+        <div>已暂停打开该网址。请确认您信任该网站后再继续。</div>
       </div>
     </div>
     <div class="url">{url_text}</div>
     <ul>{items}</ul>
     <div class="actions">
-      <button class="primary" id="btn-back">返回安全页面</button>
+      <button class="primary" id="btn-back">返回上一页</button>
       <button class="ghost" id="btn-continue">我了解风险，继续访问</button>
     </div>
-    <div class="tip">提示：可在「设置 → 隐私与安全 → 恶意网址拦截」中管理黑名单与规则。</div>
+    <div class="tip">{disclaimer_text}</div>
+    <div class="tip">提示：可在「设置 → 隐私与安全 → 可疑网址拦截」中管理黑名单与规则。</div>
   </div>
 <script>
 (function () {{

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 import sys
@@ -42,10 +43,12 @@ from .dialogs import (
     SettingsDialog,
 )
 from .downloads import DownloadManager
-from .engine import BrowserEngine, create_engine, resolve_engine
+from .engine import ENGINE_WEBVIEW2, BrowserEngine, create_engine, resolve_engine
 from .history import HistoryStore
 from .managers import DownloadManagerDialog, HistoryDialog
 from .widgets import XPWindow
+
+log = logging.getLogger(__name__)
 
 
 class MainWindow(XPWindow):
@@ -607,7 +610,8 @@ class MainWindow(XPWindow):
                 preload=bool(self.config.get("preload_links")),
                 smooth_scroll=bool(self.config.get("smooth_scroll")),
             )
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         # 广告屏蔽 / 弹窗拦截 / Flash 兼容
         try:
@@ -617,7 +621,8 @@ class MainWindow(XPWindow):
                 block_popups=self.adblock.block_popups,
             )
             self._apply_ruffle_to_engine(engine)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         return engine
 
@@ -677,7 +682,8 @@ class MainWindow(XPWindow):
         if bool(self.config.get("preload_links")):
             try:
                 engine.prefetch_links()
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
 
     def _engine_call(self, method: str) -> None:
@@ -710,7 +716,8 @@ class MainWindow(XPWindow):
                 continue
             try:
                 widget.set_content_visible(widget is current)
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 continue
 
     # ------------------------------------------------------------------ #
@@ -893,21 +900,23 @@ class MainWindow(XPWindow):
         engine = self.current_engine()
         url = engine.current_url() if engine is not None else ""
         if engine is not None and getattr(engine, "_blocked_url", ""):
-            level, text = "danger", "已拦截：该网址可能存在风险"
+            level, text = "danger", "已拦截：该网址命中本地可疑规则"
         elif not url:
             level, text = "ok", "尚未打开网页"
         elif url.lower().startswith("https://"):
-            level, text = "ok", "安全连接（HTTPS，已加密）"
+            # 只说明传输层：TLS 加密 + 证书验证通过，不代表网站本身可信
+            level, text = "ok", "HTTPS 加密连接"
         elif url.lower().startswith(("file://", "about:", "lite:", "data:", "view-source:")):
             level, text = "ok", "本地页面"
         else:
-            level, text = "warn", "不安全连接（HTTP，未加密）"
+            level, text = "warn", "HTTP 未加密连接"
         self._security_level = level
         self._security_text = text
         try:
             self.security_button.setIcon(icons.icon(security_icon(level), 16))
             self.security_button.setToolTip(f"{text}\n点击查看详细信息")
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def show_security_details(self) -> None:
@@ -930,7 +939,8 @@ class MainWindow(XPWindow):
             f"协议：{scheme or '（无）'}\n"
         )
         if scheme == "https":
-            detail += "传输加密：TLS（由内核完成证书校验）\n"
+            # 只描述传输层：加密 + 证书校验通过，不能据此判断网站是否可信
+            detail += "传输加密：TLS 加密，证书校验由内核完成（仅代表传输层安全）\n"
         elif scheme == "http":
             detail += "传输加密：无（内容可能在传输过程中被窃取或篡改）\n"
         detail += f"\n当前内核：{self.engine_id}"
@@ -952,7 +962,8 @@ class MainWindow(XPWindow):
         if not bool(self.config.get("certificate_warning", True)):
             try:
                 engine.resolve_certificate(False)
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
             return
 
@@ -961,7 +972,8 @@ class MainWindow(XPWindow):
         accepted = dialog.exec() == QDialog.Accepted and dialog.allowed
         try:
             engine.resolve_certificate(bool(accepted))
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         if had_focus:
             self.raise_()
@@ -969,8 +981,8 @@ class MainWindow(XPWindow):
     def _on_error_page(self, engine: BrowserEngine, url: str, code: int) -> None:
         tab_index = self.tabs.indexOf(engine)
         if code == -100:
-            message = "已拦截可能存在风险的网址"
-            title = "已拦截的网址"
+            message = "已暂停打开该网址（命中本地可疑规则）"
+            title = "可疑网址"
         else:
             from .errors import friendly
 
@@ -1062,7 +1074,8 @@ class MainWindow(XPWindow):
                         self.adblock.selectors_for(engine.current_url()),
                         block_popups=self.adblock.block_popups,
                     )
-                except Exception:
+                except Exception as lite_exc:
+                    log.debug("忽略异常：%s", lite_exc)
                     continue
 
     def _on_popup_blocked(self, engine: BrowserEngine, url: str) -> None:
@@ -1077,18 +1090,16 @@ class MainWindow(XPWindow):
     # Flash 兼容（Ruffle）
     # ------------------------------------------------------------------ #
     def _apply_ruffle_to_engine(self, engine: BrowserEngine) -> None:
-        from .ruffle import PUBLIC_PATH, config_dict, supports_current_engine
+        from .ruffle import PUBLIC_PATH, config_dict
 
-        enabled = bool(self.config.get("flash_compat")) and supports_current_engine(
-            self.engine_id
-        )
-        if not getattr(engine, "supports_ruffle", False):
-            enabled = False
+        # 按引擎能力判断，而不是比较 engine_id（P2-2）
+        enabled = bool(self.config.get("flash_compat")) and engine.capabilities.ruffle
         try:
             import json
 
             engine.set_ruffle(enabled, PUBLIC_PATH, json.dumps(config_dict(), ensure_ascii=False))
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def _apply_ruffle_to_all(self) -> None:
@@ -1102,7 +1113,7 @@ class MainWindow(XPWindow):
         self.config.set("flash_compat", bool(enabled))
         self._apply_ruffle_to_all()
         if enabled:
-            if not getattr(self.current_engine(), "supports_ruffle", True):
+            if not self.current_engine().capabilities.ruffle:
                 self.lbl_status.setText("Flash 兼容需要 Edge WebView2 内核（当前是 QtWebEngine）")
             else:
                 self.lbl_status.setText("已开启 Flash 兼容（Ruffle，无广告），刷新页面生效")
@@ -1131,7 +1142,8 @@ class MainWindow(XPWindow):
             return
         try:
             self.config.set("session_tabs", self._session_tabs())
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     # ------------------------------------------------------------------ #
@@ -1200,15 +1212,17 @@ class MainWindow(XPWindow):
             return ""
         lowered = text.lower()
         for prefix in ("http://", "https://", "file://", "about:", "data:", "chrome://",
-                       "view-source:", "ftp://", "mailto:", "edge://", "lite://"):
+                       "view-source:", "ftp://", "mailto:", "edge://", "lite:"):
             if lowered.startswith(prefix):
                 return text
-        if " " in text or "." not in text:
-            return search_url_builder(text)
+        # 本机地址与 IP 要先于"没有点号就当搜索词"的启发式判断，
+        # 否则 localhost:8000 会被送进搜索引擎（真实使用中很常见）。
         if re.match(r"^localhost(:\d+)?(/.*)?$", lowered):
             return "http://" + text
         if re.match(r"^\d{1,3}(\.\d{1,3}){3}(:\d+)?(/.*)?$", text):
             return "http://" + text
+        if " " in text or "." not in text:
+            return search_url_builder(text)
         if re.match(r"^[^\s/]+\.[a-z]{2,}(:\d+)?([/?#].*)?$", lowered):
             return "https://" + text
         return search_url_builder(text)
@@ -1235,11 +1249,12 @@ class MainWindow(XPWindow):
             return None
         if not bool(self.config.get("flash_compat")):
             return None
-        if not getattr(engine, "supports_ruffle", False):
+        if not engine.capabilities.ruffle:
             return None
         try:
-            page = swf_page_url(url)
-        except Exception:
+            page = swf_page_url(url, engine.ruffle_token())
+        except Exception as exc:  # noqa: BLE001
+            log.warning("生成 .swf 播放页失败：%s", exc)
             return None
         # 地址栏保留原始的 .swf 地址，不暴露内部播放页路径
         engine.address_override = url
@@ -1455,7 +1470,8 @@ class MainWindow(XPWindow):
                 accent=theme.current().highlight, on_click=on_click,
             )
             toast.show()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def _open_path(self, path: str) -> None:
@@ -1467,7 +1483,8 @@ class MainWindow(XPWindow):
                 os.startfile(path)  # type: ignore[attr-defined]
             else:
                 subprocess.Popen(["xdg-open", path])
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def _ask_folder(self, prompt: str) -> Optional[str]:
@@ -1579,7 +1596,8 @@ class MainWindow(XPWindow):
                 try:
                     (folder / name).write_text(text, encoding="utf-8")
                     count += 1
-                except OSError:
+                except OSError as lite_exc:
+                    log.debug("忽略异常：%s", lite_exc)
                     pass
         return count
 
@@ -1633,7 +1651,8 @@ class MainWindow(XPWindow):
         try:
             self.caption.update()
             self.client.update()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         for index in range(self.tabs.count()):
             widget = self.tabs.widget(index)
@@ -1649,7 +1668,8 @@ class MainWindow(XPWindow):
         self.startup_seconds = float(seconds)
         try:
             self.config.set("last_startup_seconds", round(float(seconds), 3), save=False)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     # ------------------------------------------------------------------ #
@@ -1673,7 +1693,8 @@ class MainWindow(XPWindow):
                 engine.set_preferences(
                     load_images=load_images, preload=preload, smooth_scroll=smooth
                 )
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 continue
         self._update_security_indicator()
 
@@ -1686,7 +1707,9 @@ class MainWindow(XPWindow):
         self.act_status_bar.setChecked(show_status)
         self.status.setVisible(show_status and not self._fullscreen)
 
-        self.lbl_engine.setText("WebView2" if self.engine_id == "webview2" else "QtWebEngine")
+        self.lbl_engine.setText(
+            "WebView2" if self.engine_id == ENGINE_WEBVIEW2 else "QtWebEngine"
+        )
         self._sync_incognito_actions()
         self._apply_zoom()
         if hasattr(self, "act_dark_mode"):
@@ -1700,7 +1723,8 @@ class MainWindow(XPWindow):
         try:
             self.adblock.block_popups = bool(self.config.get("block_popups"))
             self.adblock.save()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         self._apply_adblock_to_all()
         self._apply_ruffle_to_all()
@@ -1920,18 +1944,21 @@ class MainWindow(XPWindow):
                     self.config.set("last_url", url, save=False)
             self._save_session()
             self.config.save()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         if self.performance is not None:
             try:
                 self.performance.stop()
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
         for index in range(self.tabs.count()):
             widget = self.tabs.widget(index)
             if isinstance(widget, BrowserEngine):
                 try:
                     widget.shutdown()
-                except Exception:
+                except Exception as lite_exc:
+                    log.debug("忽略异常：%s", lite_exc)
                     pass
         super().closeEvent(event)

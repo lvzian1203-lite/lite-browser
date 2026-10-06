@@ -526,7 +526,7 @@ def _draw_folder_open(p: QPainter, s: float) -> None:
 
 
 def _draw_lock(p: QPainter, s: float) -> None:
-    """安全连接：挂锁。"""
+    """HTTPS 加密连接：挂锁。"""
     body = QRectF(s * 0.22, s * 0.44, s * 0.56, s * 0.46)
     p.setPen(QPen(QColor("#1B5E20"), max(1.0, s * 0.05)))
     p.setBrush(_vgrad(body, QColor("#B9E8A8"), QColor("#4CAE2A")))

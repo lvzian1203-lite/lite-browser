@@ -12,7 +12,7 @@
 还内置了 **Ruffle**（开源 Flash 运行时，无广告），Flash 小游戏网站可以直接游玩；
 以及**手动标记屏蔽网页广告**与**自动拦截弹窗**。
 
-> 作者：**lvzian**　版本：**1.6.95**　许可证：**MIT**
+> 作者：**lvzian**　版本：**1.7.0**　许可证：**MIT**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-blue.svg)](#五使用方式)
@@ -196,11 +196,13 @@ liulanqi/
 │  ├─ wv2engine.py          Edge WebView2 引擎后端（H.264/AAC、Ruffle 资源供给）
 │  ├─ qtengine.py           QtWebEngine 引擎后端（回退方案）
 │  ├─ ruffle.py             内置无广告 Flash 运行时（Ruffle）的供给与 .swf 代取
+│  ├─ safefetch.py          带 SSRF 防护的受限 HTTP 抓取（逐跳校验 + IP 钉住）
+│  ├─ logging_setup.py      统一日志（默认不输出，LITE_BROWSER_LOG=1 写文件）
 │  ├─ adblock.py            用户手动标记的广告屏蔽（规则存储 + 点选脚本）
 │  ├─ webview2doctor.py     运行环境自检与一键修复
 │  ├─ videocheck.py         视频播放自检页
-│  ├─ errors.py             自定义错误页（猫追鼠标）与恶意网址警告页
-│  ├─ netsec.py             证书校验与恶意网址判定
+│  ├─ errors.py             自定义错误页（猫追鼠标）与可疑网址提示页
+│  ├─ netsec.py             证书校验与可疑网址启发式判定
 │  ├─ crypto.py             数据加密：AES-256-GCM + DPAPI / 口令
 │  ├─ bookmarks.py          书签存储（加密）
 │  ├─ history.py            历史记录（加密，按日期分组）
@@ -226,10 +228,13 @@ liulanqi/
 │  ├─ slim_dist.py          打包后按依赖关系精简体积
 │  └─ version_info.txt      exe 版本信息（公司名 lvzian）
 ├─ assets/  docs/           图标资源 / 截图与解码自检页
+├─ tests/                   单元测试（104 个用例，仅依赖标准库 unittest）
+├─ .github/workflows/       GitHub Actions：windows 上跑 pytest + ruff
 ├─ dist/lite browser/       【已打包好的 exe】双击 lite browser.exe 即可运行
 ├─ run.bat                  源码方式启动
 ├─ build_exe.bat            一键打包 exe
 ├─ CHANGELOG.md             完整更新日志（v1.1.0086 起）
+├─ ruff.toml                代码检查配置（只查语法错误 / 未定义名等硬问题）
 └─ requirements.txt         依赖：PySide6、pythonnet、cryptography
 ```
 
@@ -288,6 +293,26 @@ python tools\build_installer.py --portable     rem 生成安装包与便携版�
 `tools\build_installer.py` 会用系统自带的 C# 编译器（.NET Framework 4.x 的 `csc.exe`）
 把 `tools\installer\installer.cs` / `uninstaller.cs` 编译成原生安装程序与卸载程序，
 再把程序目录压缩后附加到安装程序 exe 末尾（附加 12 字节尾部标记，供安装程序自读）。
+
+### 5. 运行测试
+
+测试只依赖 Python 标准库 `unittest`（`pytest` 可选），无需安装额外依赖：
+
+```bat
+python -m unittest discover -s tests -t .      rem 运行全部单元测试
+python -m unittest tests.test_safefetch -v     rem 只跑某一个模块
+```
+
+共 **104 个用例**，覆盖 SSRF 防护（地址类别、scheme、跳转链与次数上限、体积与类型限制）、
+Ruffle 会话 token、可疑网址判定的误报/漏报统计、广告屏蔽规则与注入脚本、
+AES-256-GCM 加解密与失败路径、历史记录 / 下载管理 / 配置 / 地址栏输入归一化。
+
+仓库还带有 GitHub Actions 工作流（`.github/workflows/tests.yml`）：
+在 **windows-latest + Python 3.13** 上执行 `ruff check litebrowser tests` 与
+`python -m pytest tests -v`，在 Pull Request 与 main 分支推送时自动运行。
+
+> 排查问题时设置环境变量 `LITE_BROWSER_LOG=1`，日志会写入数据目录的
+> `litebrowser.log`（默认不输出日志）；`LITE_BROWSER_TIMING=1` 另外记录启动耗时。
 
 ---
 
@@ -362,7 +387,7 @@ QtWebEngine 引擎下可用软件渲染启动：`"lite browser.exe" --disable-gp
 ## 九、关于
 
 - 名称：**lite browser**
-- 版本：**1.6.95**
+- 版本：**1.7.0**
 - 作者：**lvzian**
 - 界面风格：Windows XP (Luna) / 98 / 7 / 8.1 / 10（可切换，支持深色模式与自定义边框色）
 - 版权：Copyright (C) 2026 lvzian
@@ -377,6 +402,36 @@ QtWebEngine 引擎下可用软件渲染启动：`"lite browser.exe" --disable-gp
 
 完整的分版本更新日志（含每一项功能与修复的说明）见 **[CHANGELOG.md](CHANGELOG.md)**。
 下面是近期版本的摘要：
+
+### 1.7.0
+
+本版是一次**安全与工程质量迭代**（按外部 Code Review 清单执行），
+不改变产品定位、界面风格与用户数据格式。
+
+1. **安全加固（P0）**
+   * **修复 Ruffle 代理的 SSRF 风险**：改为手动逐跳处理跳转（最多 5 次），
+     每一跳都重新校验——只允许 `http` / `https`，解析出的**全部** IP 必须是公网地址
+     （拒绝 `127.0.0.1`、内网段、`::ffff:127.0.0.1` 等），
+     **TCP 连接钉死在已校验的 IP 上**（Host 与 TLS SNI 仍用域名，防 DNS 重绑定），
+     并限制响应体积、只接受真正的 SWF（拒绝防盗链 HTML 页面）；
+   * **代理不再把 Referer 当唯一授权**：改为按播放会话发放随机 **token**
+     （`secrets.token_urlsafe`，带过期与数量上限；随文档轮换、关闭标签页即失效，
+     不写入历史记录）。
+2. **语义与文案修正（P1）**：明确 netsec 是**本地启发式规则**而不是恶意网址库
+   （页面与设置里加免责声明）；「恶意网址」→「**可疑网址**」，
+   「安全连接（HTTPS，已加密）」→「**HTTPS 加密连接**」（HTTPS 只说明传输层加密，
+   不代表网站可信）；QtWebEngine 弹窗判定改用**用户手势时间窗**；
+   AdBlock 注入脚本改为**脏标记 + `requestAnimationFrame` 批处理**；
+   101 处静默 `except: pass` 改为带说明的日志（`LITE_BROWSER_LOG=1` 可输出）；
+   加密库缺失时**弹窗让用户选择**继续明文或退出，不再静默降级。
+3. **架构改进（P2）**：新增 `EngineCapabilities` 能力描述（界面按能力判断，
+   不再比较 `engine_id`）、`EngineState` 状态机、`TaskBridge`（统一 .NET Task 轮询）；
+   DNS 预解析补充隐私说明（默认仍关闭）。`browser.py` 的拆分**留待后续版本**。
+4. **测试与 CI（P4 / P5）**：新增 `tests/` 共 **104 个单元测试**
+   （SSRF 防护、Ruffle token、netsec 误报漏报、AdBlock、加解密、历史/下载/配置/地址栏），
+   以及 GitHub Actions 工作流（windows-latest 上跑 `pytest` + `ruff`）。
+5. **顺带修复**：地址栏输入 `localhost:8000`、`lite:video-check` 不再变成搜索词；
+   下载完成后进度显示 100%；解密失败统一抛 `VaultError`。
 
 ### 1.6.95
 

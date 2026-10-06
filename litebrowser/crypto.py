@@ -12,12 +12,15 @@ from __future__ import annotations
 import base64
 import ctypes
 import json
+import logging
 import os
 import secrets
 import sys
 from ctypes import wintypes
 from pathlib import Path
 from typing import Optional
+
+log = logging.getLogger(__name__)
 
 MAGIC = b"LTB1"
 FORMAT_VERSION = 1
@@ -300,16 +303,30 @@ class DataVault:
         return MAGIC + bytes([FORMAT_VERSION]) + nonce + blob
 
     def decrypt(self, blob: bytes) -> bytes:
+        """解密数据文件。
+
+        所有失败原因（非本程序数据、版本不符、长度不足、认证标签校验失败）
+        统一抛出 :class:`VaultError`，调用方不需要认识底层加密库的异常类型。
+        """
         if self._key is None:
             raise VaultError("数据保险库未解锁")
         if not blob.startswith(MAGIC):
             raise VaultError("不是 lite browser 加密数据")
         body = blob[len(MAGIC):]
+        if len(body) < 1 + NONCE_SIZE:
+            raise VaultError("加密数据不完整（长度不足）")
         version = body[0]
         if version != FORMAT_VERSION:
             raise VaultError(f"不支持的加密格式版本：{version}")
         nonce = body[1:1 + NONCE_SIZE]
-        return AESGCM(self._key).decrypt(nonce, body[1 + NONCE_SIZE:], None)
+        payload = body[1 + NONCE_SIZE:]
+        if not payload:
+            raise VaultError("加密数据不完整（缺少密文）")
+        try:
+            return AESGCM(self._key).decrypt(nonce, payload, None)
+        except Exception as exc:  # noqa: BLE001 - 统一转成 VaultError，原因记入日志
+            log.warning("解密失败（密钥不匹配或数据被篡改）：%s", type(exc).__name__)
+            raise VaultError("解密失败：密钥不匹配或数据已损坏") from exc
 
     @staticmethod
     def is_encrypted(blob: bytes) -> bool:

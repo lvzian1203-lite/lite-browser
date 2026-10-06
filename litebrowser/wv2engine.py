@@ -6,6 +6,7 @@ WebView2 使用系统自带的 Edge 运行时，是完整的 Chromium，
 
 from __future__ import annotations
 
+import logging
 import ctypes
 import json
 import os
@@ -18,7 +19,15 @@ from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QWidget
 
 from .config import data_dir, resource_path
-from .engine import ENGINE_WEBVIEW2, BrowserEngine, await_task
+from .engine import (
+    ENGINE_WEBVIEW2,
+    BrowserEngine,
+    EngineCapabilities,
+    EngineState,
+    await_task,
+)
+
+log = logging.getLogger(__name__)
 
 #: WebView2 运行时在注册表中的标识
 _RUNTIME_GUID = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
@@ -48,11 +57,13 @@ def _build_environment_options(config):
     options = CoreWebView2EnvironmentOptions()
     try:
         options.Language = "zh-CN"
-    except Exception:
+    except Exception as lite_exc:
+        log.debug("忽略异常：%s", lite_exc)
         pass
     try:
         options.AreBrowserExtensionsEnabled = True
-    except Exception:
+    except Exception as lite_exc:
+        log.debug("忽略异常：%s", lite_exc)
         pass
 
     arguments: list[str] = []
@@ -63,12 +74,14 @@ def _build_environment_options(config):
             cache_mb = int(config.get("cache_size_mb") or 0)
             if cache_mb > 0:
                 arguments.append(f"--disk-cache-size={cache_mb * 1024 * 1024}")
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
     if arguments:
         try:
             options.AdditionalBrowserArguments = " ".join(arguments)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
     return options
 
@@ -112,7 +125,8 @@ def _log_failure(message: str) -> None:
         (data_dir() / "webview_error.txt").write_text(
             f"{message}\n{_STATE.get('runtime_errors')}\n", encoding="utf-8"
         )
-    except OSError:
+    except OSError as lite_exc:
+        log.debug("忽略异常：%s", lite_exc)
         pass
 
 
@@ -198,7 +212,8 @@ def runtime_version() -> Optional[str]:
                 value, _ = winreg.QueryValueEx(key, "pv")
                 if value:
                     return str(value)
-        except OSError:
+        except OSError as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             continue
     return None
 
@@ -244,7 +259,8 @@ def _strip_motw(folder: Path) -> None:
     for path in folder.rglob("*.dll"):
         try:
             os.remove(str(path) + ":Zone.Identifier")
-        except OSError:
+        except OSError as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
 
@@ -271,7 +287,8 @@ def load_runtime() -> tuple[bool, str]:
         os.environ["PATH"] = str(native) + os.pathsep + os.environ.get("PATH", "")
         try:
             os.add_dll_directory(str(native))
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
     _strip_motw(folder)
 
@@ -394,6 +411,8 @@ class WebView2Engine(BrowserEngine):
 
     engine_id = ENGINE_WEBVIEW2
     supports_ruffle = True
+    #: 能力描述：界面按能力判断而不是比较 engine_id（P2-2）
+    capabilities = EngineCapabilities(ruffle=True)
 
     def __init__(self, parent: QWidget | None = None, *, incognito: bool = False) -> None:
         super().__init__(parent)
@@ -435,11 +454,14 @@ class WebView2Engine(BrowserEngine):
             QTimer.singleShot(30, self._start)
 
     def is_ready(self) -> bool:
-        return self._ready
+        """就绪判定：优先用状态机，兼容旧的 _ready 标记。"""
+        return bool(self._ready) or self.state is EngineState.READY
 
     def _start(self) -> None:
+        self.set_state(EngineState.INITIALIZING)
         ok, error = load_runtime()
         if not ok:
+            self.set_state(EngineState.FAILED)
             self._failed = True
             self.status_message.emit(f"WebView2 初始化失败：{error}")
             self.load_finished.emit(False)
@@ -467,6 +489,8 @@ class WebView2Engine(BrowserEngine):
         self._on_environment(environment)
 
     def _on_failure(self, error: Exception) -> None:
+        self.set_state(EngineState.FAILED)
+        log.error("WebView2 初始化失败：%s", error)
         self._failed = True
         self.status_message.emit(f"WebView2 初始化失败：{error}")
         self.load_finished.emit(False)
@@ -477,7 +501,8 @@ class WebView2Engine(BrowserEngine):
         self._environment = environment
         try:
             _STATE["browser_version"] = str(environment.BrowserVersionString)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
         task = None
@@ -543,7 +568,8 @@ class WebView2Engine(BrowserEngine):
                 CoreWebView2WebResourceResponseReceivedEventArgs,
                 self._on_web_resource_response,
             )
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         self._subscribe_event(core, "DownloadStarting",
                               CoreWebView2DownloadStartingEventArgs, self._on_download)
@@ -559,10 +585,12 @@ class WebView2Engine(BrowserEngine):
 
         try:
             core.AddScriptToExecuteOnDocumentCreatedAsync(_INJECT_JS)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
         self._ready = True
+        self.set_state(EngineState.READY)
         self.set_zoom_factor(self._zoom)
         if self._pending_url:
             url, self._pending_url = self._pending_url, None
@@ -585,7 +613,8 @@ class WebView2Engine(BrowserEngine):
         self._delegates.append(delegate)
         try:
             adder(delegate)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def _configure_settings(self) -> None:
@@ -607,7 +636,8 @@ class WebView2Engine(BrowserEngine):
         ):
             try:
                 setattr(settings, name, value)
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
 
     def _apply_bounds(self) -> None:
@@ -621,7 +651,8 @@ class WebView2Engine(BrowserEngine):
             self._controller.Bounds = Rectangle(
                 0, 0, max(1, int(self.width() * ratio)), max(1, int(self.height() * ratio))
             )
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def resizeEvent(self, event) -> None:  # noqa: D102
@@ -629,14 +660,18 @@ class WebView2Engine(BrowserEngine):
         self._apply_bounds()
 
     def shutdown(self) -> None:
+        self.set_state(EngineState.CLOSING)
         try:
+            self.revoke_ruffle_token()
             if self._controller is not None:
                 self._controller.Close()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         self._controller = None
         self._core = None
         self._ready = False
+        self.set_state(EngineState.CLOSED)
 
     # -- 导航 ------------------------------------------------------------- #
     def load(self, url: str) -> None:
@@ -649,7 +684,8 @@ class WebView2Engine(BrowserEngine):
         if self._core is not None:
             try:
                 return str(self._core.Source)
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
         return self._url
 
@@ -657,7 +693,8 @@ class WebView2Engine(BrowserEngine):
         if self._core is not None:
             try:
                 return str(self._core.DocumentTitle)
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
         return self._title
 
@@ -676,25 +713,29 @@ class WebView2Engine(BrowserEngine):
     def go_back(self) -> None:
         try:
             self._core.GoBack()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def go_forward(self) -> None:
         try:
             self._core.GoForward()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def reload(self) -> None:
         try:
             self._core.Reload()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def stop(self) -> None:
         try:
             self._core.Stop()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     # -- 缩放 ------------------------------------------------------------- #
@@ -706,7 +747,8 @@ class WebView2Engine(BrowserEngine):
         if self._controller is not None:
             try:
                 self._controller.ZoomFactor = float(factor)
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
 
     # -- 脚本 ------------------------------------------------------------- #
@@ -758,13 +800,15 @@ class WebView2Engine(BrowserEngine):
     def save_page(self) -> None:
         try:
             self._core.ShowSaveAsUIAsync()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def open_dev_tools(self) -> None:
         try:
             self._core.OpenDevToolsWindow()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def focus_content(self) -> None:
@@ -786,15 +830,23 @@ class WebView2Engine(BrowserEngine):
             return
         self._internal_page = False
 
+        # 0.5) 新的文档开始加载：轮换 Ruffle 会话 token（旧 token 立即失效）
+        if not uri.lower().startswith(("lite:", "about:", "data:")):
+            try:
+                self.rotate_ruffle_token()
+            except Exception as exc:  # noqa: BLE001
+                log.debug("轮换 Ruffle token 失败：%s", exc)
+
         # 1) 内部命令（错误页 / 警告页上的按钮）
         if uri and self.handle_internal_url(uri):
             try:
                 args.Cancel = True
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
             return
 
-        # 2) 恶意网址拦截
+        # 2) 可疑网址提示（本地启发式规则）
         checker = self.security_manager
         if checker is not None and uri and not uri.lower().startswith(
             ("about:", "data:", "file:", "lite:", "view-source:")
@@ -806,7 +858,8 @@ class WebView2Engine(BrowserEngine):
             if verdict is not None and verdict.blocked:
                 try:
                     args.Cancel = True
-                except Exception:
+                except Exception as lite_exc:
+                    log.debug("忽略异常：%s", lite_exc)
                     pass
                 self._blocked_url = uri
                 # 在 NavigationStarting 回调里直接导航会被内核忽略，延后一拍
@@ -865,11 +918,13 @@ class WebView2Engine(BrowserEngine):
             scripts.append(bootstrap_script(
                 getattr(self, "_ruffle_public_path", ""),
                 getattr(self, "_ruffle_config", ""),
+                self.ruffle_token(),
             ))
         for script in scripts:
             try:
                 core.ExecuteScriptAsync(script)
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 continue
 
     def _register_ruffle_handler(self) -> None:
@@ -893,7 +948,8 @@ class WebView2Engine(BrowserEngine):
                 CoreWebView2WebResourceRequestedEventArgs,
                 self._on_web_resource_requested,
             )
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def _on_web_resource_requested(self, sender, args) -> None:
@@ -918,19 +974,27 @@ class WebView2Engine(BrowserEngine):
             args.Response = response
 
     def _serve_swf_proxy(self, uri: str, args) -> None:
-        """代取外部 .swf：解决自托管 Ruffle 抓不到跨域 Flash 文件的问题。"""
+        """代取外部 .swf：解决自托管 Ruffle 抓不到跨域 Flash 文件的问题。
+
+        授权以**会话 token** 为主（不可预测、随文档轮换、标签页关闭即失效），
+        Referer 只作为辅助信号——它可被伪造或省略，不构成授权依据。
+        """
         from . import ruffle
 
-        target = ruffle.unproxy_target(uri)
+        target, token = ruffle.parse_proxy_request(uri)
         if not target:
+            log.debug("Ruffle 代理：请求缺少目标地址")
             return
-        # 只服务本程序自己的播放页发起的请求，避免被任意网页当代理用
+        if not ruffle.SESSIONS.valid(token):
+            log.warning("Ruffle 代理拒绝：token 无效或已过期（%s）", target[:120])
+            return
         try:
             referer = str(args.Request.Headers.GetHeader("Referer") or "")
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
+            log.debug("读取 Referer 失败：%s", exc)
             referer = ""
         if referer and not referer.lower().startswith("file:"):
-            return
+            log.debug("Ruffle 代理：Referer 非本地播放页（%s）", referer[:80])
         cached = _SWF_CACHE.get(target)
         if cached is None:
             fetched = ruffle.fetch_swf(target, referer)
@@ -954,7 +1018,8 @@ class WebView2Engine(BrowserEngine):
         if script_id is not None:
             try:
                 core.RemoveScriptToExecuteOnDocumentCreated(script_id)
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
             self._ruffle_script_id = None
         if not enabled:
@@ -1088,7 +1153,8 @@ class WebView2Engine(BrowserEngine):
                 done(payload)
 
             await_task(task, unwrap)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def _on_source_changed(self, sender, args) -> None:
@@ -1247,17 +1313,20 @@ class WebView2Engine(BrowserEngine):
                 pixmap = QPixmap()
                 if pixmap.loadFromData(data):
                     self.icon_changed.emit(QIcon(pixmap))
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
 
         try:
             await_task(self._core.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png), done)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
     def _on_fullscreen_changed(self, sender, args) -> None:
         try:
             self.fullscreen_requested.emit(bool(self._core.ContainsFullScreenElement))
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def _on_accelerator(self, sender, args) -> None:
@@ -1281,7 +1350,8 @@ class WebView2Engine(BrowserEngine):
         try:
             if self.accelerator_handler(qt_key, ctrl, shift, alt):
                 args.Handled = True
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     # ------------------------------------------------------------------ #
@@ -1295,7 +1365,8 @@ class WebView2Engine(BrowserEngine):
             if not self._default_ua:
                 self._default_ua = str(core.Settings.UserAgent)
             core.Settings.UserAgent = user_agent or self._default_ua
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def _cdp(self, method: str, params: Optional[dict] = None):
@@ -1380,7 +1451,8 @@ class WebView2Engine(BrowserEngine):
                 task = self._core.Profile.ClearBrowsingDataAsync(kinds)
                 await_task(task, lambda _result: None)
                 return
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         # 退路：用 DevTools 协议清理当前来源
         try:
@@ -1389,7 +1461,8 @@ class WebView2Engine(BrowserEngine):
                 base = origin[0] + "//" + origin[2]
                 self._cdp("Storage.clearDataForOrigin",
                           {"origin": base, "storageTypes": "all"})
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def save_page_as(self, path: str, fmt: str = "mhtml") -> bool:
@@ -1402,7 +1475,8 @@ class WebView2Engine(BrowserEngine):
                     data = payload.get("data") or ""
                     with open(path, "w", encoding="utf-8") as handle:
                         handle.write(data)
-                except Exception:
+                except Exception as lite_exc:
+                    log.debug("忽略异常：%s", lite_exc)
                     pass
 
             task = self._cdp("Page.captureSnapshot", {"format": "mhtml"})
@@ -1424,7 +1498,8 @@ class WebView2Engine(BrowserEngine):
         try:
             task = self._core.ShowPrintUIAsync()
             await_task(task, lambda _result: None)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def export_pdf(self, path: str) -> bool:
@@ -1434,7 +1509,8 @@ class WebView2Engine(BrowserEngine):
             settings = self._core.Environment.CreatePrintSettings()
             try:
                 settings.ShouldPrintBackgrounds = True
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
             task = self._core.PrintToPdfAsync(path, settings)
             await_task(task, lambda _result: None)
@@ -1446,7 +1522,8 @@ class WebView2Engine(BrowserEngine):
         try:
             if self._controller is not None:
                 self._controller.IsVisible = bool(visible)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         if not visible:
             return
@@ -1461,7 +1538,8 @@ class WebView2Engine(BrowserEngine):
                 return
             task = core.TrySuspendAsync()
             await_task(task, lambda _ok: setattr(self, "_suspended", True))
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def resume(self) -> None:
@@ -1471,7 +1549,8 @@ class WebView2Engine(BrowserEngine):
         try:
             if core.IsSuspended:
                 core.Resume()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         self._suspended = False
 
@@ -1489,7 +1568,8 @@ class WebView2Engine(BrowserEngine):
         try:
             if bool(core.IsDocumentPlayingAudio):
                 return True
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         # 有些站点会把视频静音自动播放，这里再检查一次页面里的 <video>
         try:
@@ -1499,7 +1579,8 @@ class WebView2Engine(BrowserEngine):
                 "if(!m.paused && !m.ended && m.readyState>2) return 1;} return 0;})()"
             )
             self._video_probe = task
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         return False
 
@@ -1524,7 +1605,8 @@ class WebView2Engine(BrowserEngine):
                 return
             self._cdp("Network.enable")
             self._cdp("Network.setBlockedURLs", {"urls": self._IMAGE_BLOCK_PATTERNS})
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     # ------------------------------------------------------------------ #
@@ -1545,7 +1627,8 @@ class WebView2Engine(BrowserEngine):
             try:
                 self._subscribe_event(core, "ServerCertificateErrorDetected", Object,
                                       self._on_certificate_error)
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
 
     def _on_certificate_error(self, sender, args) -> None:
@@ -1568,7 +1651,8 @@ class WebView2Engine(BrowserEngine):
                 info.issuer = str(cert.Issuer)
                 info.valid_from = SecurityManager.describe_time(cert.ValidFrom)
                 info.valid_to = SecurityManager.describe_time(cert.ValidTo)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
         checker = self.security_manager
@@ -1595,7 +1679,8 @@ class WebView2Engine(BrowserEngine):
             if deferral is not None:
                 try:
                     deferral.Complete()
-                except Exception:
+                except Exception as lite_exc:
+                    log.debug("忽略异常：%s", lite_exc)
                     pass
 
         self._certificate_decider = decide
@@ -1622,7 +1707,8 @@ class WebView2Engine(BrowserEngine):
             else:
                 action = CoreWebView2ServerCertificateErrorAction.Cancel
             args.Action = action
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def resolve_certificate(self, allow: bool) -> None:

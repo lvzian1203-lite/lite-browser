@@ -20,6 +20,11 @@ env-report.txt
 webview_error.txt
 startup.log
 
+# 测试运行时产生的数据目录与缓存
+tests/_data/
+.pytest_cache/
+.ruff_cache/
+
 # 编辑器 / 系统
 .vscode/
 .idea/

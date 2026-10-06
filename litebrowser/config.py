@@ -16,7 +16,7 @@ from typing import Any
 from PySide6.QtCore import QObject, Signal
 
 APP_NAME = "lite browser"
-APP_VERSION = "1.6.95"
+APP_VERSION = "1.7.0"
 BUILD_YEAR = "2026"
 AUTHOR = "lvzian"
 ORG_NAME = "LiteBrowser"
@@ -125,7 +125,7 @@ class Config(QObject):
         "user_agent": "",                # 空 = 内核默认
         "strict_certificate": False,     # True = 证书有问题直接拒绝
         "certificate_warning": True,     # 证书有问题时弹出提示由用户决定
-        "block_malicious": True,         # 恶意网址拦截
+        "block_malicious": True,         # 可疑网址提示（本地启发式规则，键名保持兼容）
         # 广告屏蔽 / Flash 兼容
         "block_popups": True,            # 拦截网页自动弹出的窗口（非用户点击）
         "flash_compat": True,            # 用 Ruffle 运行 Flash 内容（无广告）

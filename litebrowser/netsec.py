@@ -1,11 +1,16 @@
-"""网络安全：HTTPS 证书校验与恶意网址警告。
+"""网络安全：HTTPS 证书校验与**可疑网址**提示。
+
+.. important::
+   本模块的网址判定是**本地启发式规则**，用于识别"看起来可疑"的 URL 特征，
+   它**不是**恶意网址信誉数据库，也不是杀毒软件；命中不等于该网站一定有害，
+   未命中也不代表网站安全。相关文案必须如实反映这一点（见 :data:`DISCLAIMER`）。
 
 证书部分负责把两个内核各自返回的证书信息统一成 :class:`CertificateInfo`，
 再由界面展示（颁发者、有效期、错误原因），用户可以查看详情并决定是否继续。
 
 网址部分是一个本地判定引擎：用户黑名单 + 一组启发式规则
 （IP 主机、punycode 同形异义、userinfo 伪装、敏感词、可疑端口等），
-命中后由浏览器弹出警告页，而不是直接放行。
+命中后由浏览器弹出提示页，而不是直接放行。
 """
 
 from __future__ import annotations
@@ -19,6 +24,12 @@ from typing import Iterable, Optional
 from urllib.parse import unquote, urlsplit
 
 from PySide6.QtCore import QObject, Signal
+
+#: 能力边界声明：所有面向用户的提示都必须带上它，避免把启发式规则说成"恶意网址库"
+DISCLAIMER = (
+    "本检测基于本地启发式规则，仅用于识别可疑 URL 特征，"
+    "不等同于恶意网址信誉数据库或杀毒软件。"
+)
 
 #: 命中即拦截（危险）
 DANGER = "danger"
@@ -85,9 +96,9 @@ class UrlVerdict:
     @property
     def title(self) -> str:
         return {
-            DANGER: "已拦截：该网址可能存在风险",
-            WARN: "该网址看起来不太安全",
-        }.get(self.level, "网址安全")
+            DANGER: "已拦截：该网址命中本地可疑规则",
+            WARN: "该网址看起来可疑",
+        }.get(self.level, "网址状态")
 
 
 class SecurityManager(QObject):

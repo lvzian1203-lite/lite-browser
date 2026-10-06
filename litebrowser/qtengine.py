@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import re
+import time
 from pathlib import Path
 from typing import Callable, Optional
 
-from PySide6.QtCore import QTimer, QUrl
+from PySide6.QtCore import QEvent, QTimer, QUrl
 from PySide6.QtWebEngineCore import (
     QWebEnginePage,
     QWebEngineProfile,
@@ -16,7 +18,14 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from .config import cache_dir, profile_dir
-from .engine import ENGINE_QTWEB, BrowserEngine
+from .engine import (
+    ENGINE_QTWEB,
+    BrowserEngine,
+    EngineCapabilities,
+    EngineState,
+)
+
+log = logging.getLogger(__name__)
 
 _profiles: dict[bool, Optional[QWebEngineProfile]] = {}
 _download_handler: Optional[Callable[[object], None]] = None
@@ -65,7 +74,8 @@ def _set_attribute(settings: QWebEngineSettings, name: str, value) -> None:
     if attribute is not None:
         try:
             settings.setAttribute(attribute, value)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
 
@@ -113,7 +123,8 @@ def profile(incognito: bool = False) -> QWebEngineProfile:
                 QWebEngineProfile.PersistentCookiesPolicy.NoPersistentCookies
             )
             profile_.setHttpCacheType(QWebEngineProfile.HttpCacheType.MemoryHttpCache)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         profile_.setPersistentStoragePath("")
         profile_.setCachePath("")
@@ -128,7 +139,8 @@ def profile(incognito: bool = False) -> QWebEngineProfile:
                 QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies
             )
             profile_.setHttpCacheType(QWebEngineProfile.HttpCacheType.DiskHttpCache)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         profile_.setHttpUserAgent(_strip_qt_token(profile_.httpUserAgent()))
 
@@ -151,7 +163,8 @@ def _on_download(request) -> None:
         if request.isSavePageDownload():
             request.accept()
             return
-    except Exception:
+    except Exception as lite_exc:
+        log.debug("忽略异常：%s", lite_exc)
         pass
     if _download_handler is not None:
         _download_handler(request)
@@ -189,7 +202,8 @@ def handle_download(request, manager) -> None:
     )
     try:
         finished_signal.connect(done)
-    except AttributeError:
+    except AttributeError as lite_exc:
+        log.debug("忽略异常：%s", lite_exc)
         pass
     request.accept()
 
@@ -210,7 +224,8 @@ class _LitePage(QWebEnginePage):
                 if not self._engine.popup_is_user_initiated():
                     self._engine.popup_blocked.emit("")
                     return None
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
         provider = self._engine.new_tab_provider
         if provider is None:
@@ -222,7 +237,8 @@ class _LitePage(QWebEnginePage):
         try:
             if self._engine.intercept_navigation(url.toString(), bool(is_main_frame)):
                 return False
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         return super().acceptNavigationRequest(url, nav_type, is_main_frame)
 
@@ -252,7 +268,8 @@ class _LitePage(QWebEnginePage):
         if self._engine.strict_certificate():
             try:
                 error.rejectCertificate()
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
             self._engine.status_message.emit(f"已拒绝不安全的连接：{info.host}")
             return True
@@ -262,7 +279,8 @@ class _LitePage(QWebEnginePage):
         except Exception:
             try:
                 error.rejectCertificate()
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
             return True
 
@@ -272,7 +290,8 @@ class _LitePage(QWebEnginePage):
                     error.acceptCertificate()
                 else:
                     error.rejectCertificate()
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
 
         self._engine._certificate_decider = decide
@@ -287,11 +306,18 @@ class QtWebEngine(BrowserEngine):
     """用 QWebEngineView 实现的引擎。"""
 
     engine_id = ENGINE_QTWEB
+    #: QtWebEngine 不含专有编解码器，也无法提供本地 Ruffle（P2-2）
+    capabilities = EngineCapabilities(ruffle=False, proprietary_codecs=False)
+
+    #: 用户手势有效窗口（秒）：createWindow 距离最近一次真实点击/按键多久内算用户触发
+    USER_GESTURE_WINDOW = 1.5
 
     def __init__(self, parent: QWidget | None = None, *, incognito: bool = False) -> None:
         super().__init__(parent)
         self.incognito = bool(incognito)
         self._suspended = False
+        #: 最近一次真实用户输入（鼠标按下 / 按键）的时间戳
+        self._last_user_input = 0.0
         self.setObjectName("qtEngine")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -302,6 +328,10 @@ class QtWebEngine(BrowserEngine):
         self.view.setPage(self.page)
         layout.addWidget(self.view)
 
+        # 记录真实用户输入：QtWebEngine 没有 IsUserInitiated 之类的接口，
+        # 只能用"最近是否有点击/按键"来近似判断弹窗来源。
+        self.view.installEventFilter(self)
+
         self.view.loadStarted.connect(self._on_started)
         self.view.loadProgress.connect(self.load_progress.emit)
         self.view.loadFinished.connect(self._on_finished)
@@ -310,6 +340,32 @@ class QtWebEngine(BrowserEngine):
         self.view.iconChanged.connect(self._on_icon)
         self.page.linkHovered.connect(self._on_hover)
         self.page.findTextFinished.connect(self._on_find)
+
+    # -- 用户手势 --------------------------------------------------------- #
+    def eventFilter(self, obj, event):  # noqa: N802 - Qt 命名
+        try:
+            kind = event.type()
+            if kind in (
+                QEvent.Type.MouseButtonPress,
+                QEvent.Type.KeyPress,
+                QEvent.Type.Wheel,
+                QEvent.Type.TouchBegin,
+            ):
+                self.note_user_input()
+        except Exception as exc:  # noqa: BLE001 - 记录时间戳失败不能影响事件派发
+            log.debug("记录用户手势失败：%s", exc)
+        return super().eventFilter(obj, event)
+
+    def note_user_input(self) -> None:
+        """记录一次真实用户输入（供弹窗判定使用）。"""
+        self._last_user_input = time.monotonic()
+
+    def has_recent_user_gesture(self) -> bool:
+        """最近 USER_GESTURE_WINDOW 秒内是否有真实点击/按键。"""
+        last = getattr(self, "_last_user_input", 0.0)
+        if not last:
+            return False
+        return (time.monotonic() - last) <= self.USER_GESTURE_WINDOW
 
     # -- 导航 ------------------------------------------------------------- #
     def load(self, url: str) -> None:
@@ -386,7 +442,8 @@ class QtWebEngine(BrowserEngine):
     def set_user_agent(self, user_agent: str) -> None:
         try:
             profile(self.incognito).setHttpUserAgent(user_agent or qt_default_user_agent())
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def list_cookies(self, callback) -> None:
@@ -415,7 +472,8 @@ class QtWebEngine(BrowserEngine):
         def finish() -> None:
             try:
                 store.cookieAdded.disconnect(on_added)
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
             # loadAllCookies() 只返回持久化 Cookie，当前页面的会话 Cookie
             # 通过脚本再补一次，保证管理器里能看到它们
@@ -466,25 +524,29 @@ class QtWebEngine(BrowserEngine):
             return
         try:
             profile(self.incognito).cookieStore().deleteCookie(raw)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def delete_all_cookies(self) -> None:
         try:
             profile(self.incognito).cookieStore().deleteAllCookies()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def delete_session_cookies(self) -> None:
         try:
             profile(self.incognito).cookieStore().deleteSessionCookies()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def clear_cache(self) -> None:
         try:
             profile(self.incognito).clearHttpCache()
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def clear_site_data(self) -> None:
@@ -519,7 +581,8 @@ class QtWebEngine(BrowserEngine):
     def set_content_visible(self, visible: bool) -> None:
         try:
             self.view.setVisible(bool(visible))
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         if visible:
             self.resume()
@@ -528,13 +591,15 @@ class QtWebEngine(BrowserEngine):
         try:
             self.page.setLifecycleState(QWebEnginePage.LifecycleState.Frozen)
             self._suspended = True
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def resume(self) -> None:
         try:
             self.page.setLifecycleState(QWebEnginePage.LifecycleState.Active)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
         self._suspended = False
 
@@ -557,7 +622,8 @@ class QtWebEngine(BrowserEngine):
             _set_attribute(settings, "AutoLoadImages", bool(load_images))
             _set_attribute(settings, "ScrollAnimatorEnabled", bool(smooth_scroll))
             _set_attribute(settings, "DnsPrefetchEnabled", bool(preload))
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     # ------------------------------------------------------------------ #
@@ -583,11 +649,15 @@ class QtWebEngine(BrowserEngine):
         self.view.setFocus()
 
     def shutdown(self) -> None:
+        self.set_state(EngineState.CLOSING)
         try:
+            self.revoke_ruffle_token()
             self.view.stop()
             self.view.setPage(None)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
+        self.set_state(EngineState.CLOSED)
 
     # -- 事件 ------------------------------------------------------------- #
     def _on_started(self) -> None:
@@ -597,11 +667,22 @@ class QtWebEngine(BrowserEngine):
         self.load_started.emit()
 
     def popup_is_user_initiated(self) -> bool:
-        """QtWebEngine 无法可靠区分弹窗来源，这里按“有焦点即视为用户触发”处理。"""
-        try:
-            return bool(self.view.hasFocus() or self.view.isActiveWindow())
-        except Exception:
+        """判断弹出窗口是否可能由用户操作触发。
+
+        QtWebEngine 没有 ``IsUserInitiated`` 之类的接口，
+        ``hasFocus()`` / ``isActiveWindow()`` 并不能代表"用户刚刚点了东西"，
+        因此这里改用**用户手势时间窗**：只有最近
+        :attr:`USER_GESTURE_WINDOW` 秒内发生过真实点击 / 按键 / 滚轮 / 触摸，
+        才认为是用户触发。这样既能放行用户点击的 ``target="_blank"`` 链接，
+        又能挡掉页面加载后自行弹出的脚本窗口。
+        """
+        if self.has_recent_user_gesture():
             return True
+        # 手势窗口外：再给"窗口处于活动状态且刚切换过焦点"一个很弱的兜底，
+        # 避免键盘激活链接（Enter）在个别平台上没有产生 KeyPress 事件时被误杀
+        if getattr(self, "_last_user_input", 0.0) == 0.0:
+            return bool(self.view.isActiveWindow() and self.view.hasFocus())
+        return False
 
     def _inject_page_helpers(self) -> None:
         """把广告屏蔽规则注入当前页面（QtWebEngine 不支持 Ruffle 的本地资源供给）。"""
@@ -615,12 +696,14 @@ class QtWebEngine(BrowserEngine):
     def _on_finished(self, ok: bool) -> None:
         self.load_progress.emit(100)
         if not ok:
+            self.set_state(EngineState.FAILED)
             self.load_finished.emit(False)
             self.set_error_page(
                 self.current_url(), -16,
                 "无法打开该页面（网络不可用、域名无法解析或服务器返回错误）",
             )
             return
+        self.set_state(EngineState.READY)
         self.load_finished.emit(True)
         self._inject_page_helpers()
         self._check_http_status()

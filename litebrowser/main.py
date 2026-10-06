@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 import tempfile
@@ -12,7 +13,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication, QDialog, QMessageBox, QStyleFactory
 
-from . import icons, theme
+from . import icons, logging_setup, theme
 from .bookmarks import BookmarkStore
 from .browser import MainWindow
 from .config import APP_NAME, APP_VERSION, AUTHOR, ORG_NAME, Config, data_dir
@@ -24,6 +25,8 @@ from .history import HistoryStore
 from .netsec import SecurityManager
 from .performance import PerformanceManager
 from .widgets import StartupSplash
+
+log = logging.getLogger(__name__)
 
 
 def _prepare_environment(argv: list[str]) -> None:
@@ -48,7 +51,8 @@ def _prepare_environment(argv: list[str]) -> None:
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
                 f"{ORG_NAME}.{APP_NAME}.{APP_VERSION}"
             )
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
 
@@ -63,17 +67,38 @@ def _take_start_url(argv: list[str]) -> str | None:
     return None
 
 
+class _VaultAbort(Exception):
+    """用户在「无法加密」提示里选择了退出，启动流程应中止。"""
+
+
 def _open_vault() -> DataVault | None:
-    """初始化数据保险库；必要时提示输入口令。返回 None 表示本次不保存数据。"""
+    """初始化数据保险库；必要时提示输入口令。
+
+    返回 None 表示本次运行不保存书签 / 历史 / 下载记录（口令未解锁）；
+    若加密库缺失且用户选择退出，则抛出 :class:`_VaultAbort`。
+    """
     vault = DataVault(data_dir())
 
     if not vault.available:
-        QMessageBox.information(
-            None,
-            APP_NAME,
-            "未安装 cryptography 加密库，书签 / 历史 / 下载记录将以明文保存。\n"
-            "如需加密保护，请执行：pip install cryptography",
+        # 加密能力缺失时必须让用户明确知情并自行决定，
+        # 不允许静默降级为明文存储（数据落盘方式影响隐私）。
+        box = QMessageBox()
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle(APP_NAME)
+        box.setText("当前环境无法启用数据加密")
+        box.setInformativeText(
+            "未找到 cryptography 加密库，本次运行中书签、历史记录与下载记录"
+            "只能以明文保存，同一台电脑上的其他程序或用户可以读取这些内容。\n\n"
+            "如需加密保护，请先安装后重新启动：\n"
+            "    pip install cryptography"
         )
+        plain_button = box.addButton("继续使用明文(&C)", QMessageBox.AcceptRole)
+        box.addButton("退出(&Q)", QMessageBox.RejectRole)
+        box.setDefaultButton(plain_button)
+        box.exec()
+        if box.clickedButton() is not plain_button:
+            raise _VaultAbort()
+        log.warning("cryptography 不可用，用户选择以明文方式继续运行")
         return vault
 
     if vault.initialize():
@@ -124,7 +149,8 @@ def _run_env_report() -> int:
         target = Path(tempfile.gettempdir()) / "lite-browser-env-report.txt"
         try:
             target.write_text(text, encoding="utf-8")
-        except OSError:
+        except OSError as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     # 窗口程序没有控制台，能写 stdout 就写，写不了就弹个原生提示框
@@ -133,7 +159,8 @@ def _run_env_report() -> int:
         if sys.stdout is not None:
             sys.stdout.write(text + f"\n报告已保存：{target}\n")
             written = True
-    except Exception:
+    except Exception as lite_exc:
+        log.debug("忽略异常：%s", lite_exc)
         pass
     if not written:
         try:
@@ -146,13 +173,16 @@ def _run_env_report() -> int:
                 f"{APP_NAME} 环境自检",
                 0x40,
             )
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     started = time.perf_counter()
+    # 日志：默认不输出；设置 LITE_BROWSER_LOG=1 / LITE_BROWSER_TIMING=1 时写入数据目录
+    logging_setup.setup()
     argv = list(sys.argv if argv is None else argv)
     _prepare_environment(argv)
     if _env_report_requested(argv):
@@ -212,12 +242,22 @@ def main(argv: list[str] | None = None) -> int:
             from .wv2engine import prewarm_environment
 
             prewarm_environment(config)
-        except Exception:
+        except Exception as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     splash.set_message("正在解锁数据…")
     data_root = data_dir()
-    vault = _open_vault()
+    try:
+        vault = _open_vault()
+    except _VaultAbort:
+        # 用户在"无法加密"提示中选择了退出：关闭启动画面并结束启动
+        log.warning("用户选择在无加密环境下退出，启动已中止")
+        try:
+            splash.close()
+        except Exception as exc:  # noqa: BLE001 - 关闭启动画面失败不影响退出
+            log.debug("关闭启动画面失败：%s", exc)
+        return 1
     # vault 为 None（口令未解锁）时，用一个未解锁的保险库占位：
     # 读取返回空、写入被跳过，从而不会把数据写成明文。
     store_vault = vault if vault is not None else DataVault(data_root)
@@ -313,7 +353,8 @@ def _trace_startup(window, started: float, data_root, report: dict) -> None:
         print(f"[timing] {text}", flush=True)
         try:
             (data_root / "startup.log").write_text(text + "\n", encoding="utf-8")
-        except OSError:
+        except OSError as lite_exc:
+            log.debug("忽略异常：%s", lite_exc)
             pass
 
     def on_loaded(_ok: bool) -> None:
@@ -339,11 +380,13 @@ def _trace_startup(window, started: float, data_root, report: dict) -> None:
                 for key in ("t_importnet", "t_load", "t_import", "t_ref", "t_types"):
                     if _wv2_state.get(key):
                         report[key.replace("t_", "clr_")] = _wv2_state[key]
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
             try:
                 engine.load_finished.connect(on_loaded)
-            except Exception:
+            except Exception as lite_exc:
+                log.debug("忽略异常：%s", lite_exc)
                 pass
         QTimer.singleShot(50, poll)
 

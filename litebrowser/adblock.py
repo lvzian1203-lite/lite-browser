@@ -196,35 +196,74 @@ def apply_script(selectors: Iterable[str]) -> str:
   if (window.__liteAdblockReady) {{ window.__liteAdblockApply && window.__liteAdblockApply(); return; }}
   var selectors = {payload};
   var STYLE_ID = '__lite_adblock_style';
+  var CACHE_ID = '__lite_adblock_cache';
+
   function cssText() {{
     return selectors.map(function (s) {{
       return s + '{{display:none !important;visibility:hidden !important;}}';
     }}).join('\\n');
   }}
+
+  // 只在「样式缺失」或「内容真的变了」时才写 DOM，
+  // 避免每次 mutation 都触碰 style 元素（SPA 页面每秒可能产生上千次 mutation）。
   function ensureStyle() {{
     var style = document.getElementById(STYLE_ID);
     if (!style) {{
       style = document.createElement('style');
       style.id = STYLE_ID;
       style.type = 'text/css';
+      style.textContent = cssText();
       (document.head || document.documentElement).appendChild(style);
+      window[CACHE_ID] = style.textContent;
+      return;
     }}
-    if (style.textContent !== cssText()) style.textContent = cssText();
+    if (window[CACHE_ID] === style.textContent) return;   // 没变，什么都不做
+    var text = cssText();
+    if (style.textContent !== text) {{
+      style.textContent = text;
+      window[CACHE_ID] = text;
+    }}
   }}
-  window.__liteAdblockApply = ensureStyle;
+
+  // 批量调度：同一帧内的多次 mutation 只处理一次
+  var pending = false;
+  function schedule() {{
+    if (pending) return;
+    pending = true;
+    var run = function () {{ pending = false; ensureStyle(); }};
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+    else setTimeout(run, 16);
+  }}
+
+  window.__liteAdblockApply = function () {{ schedule(); }};
   ensureStyle();
-  // 有些广告脚本会把我们的样式删掉，或被隐藏后又重新插入，这里持续补刀
+
   if (!window.__liteAdblockObserver) {{
-    var observer = new MutationObserver(function () {{
-      ensureStyle();
-      if (!document.getElementById(STYLE_ID)) ensureStyle();
+    var observer = new MutationObserver(function (records) {{
+      // 只有可能影响我们样式的情况才调度：
+      // 1) style 元素被移除/改动；2) 新增节点；3) class 变化
+      for (var i = 0; i < records.length; i++) {{
+        var rec = records[i];
+        if (rec.type === 'attributes' && rec.target && rec.target.id === STYLE_ID) {{
+          window[CACHE_ID] = null;   // 样式被外部改动，强制重建
+          schedule();
+          return;
+        }}
+      }}
+      schedule();
     }});
     observer.observe(document.documentElement || document, {{
       childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class']
     }});
     window.__liteAdblockObserver = observer;
-    document.addEventListener('DOMContentLoaded', ensureStyle);
-    setInterval(ensureStyle, 3000);
+    document.addEventListener('DOMContentLoaded', schedule);
+    // 兜底巡检：广告脚本偶尔会整体替换 <head>，低频检查即可
+    setInterval(function () {{
+      if (!document.getElementById(STYLE_ID)) {{
+        window[CACHE_ID] = null;
+        ensureStyle();
+      }}
+    }}, 5000);
   }}
   window.__liteAdblockReady = true;
 }})();
