@@ -371,8 +371,9 @@ class DataVault:
         if legacy_path is not None and legacy_path.exists():
             try:
                 legacy_path.unlink()
-            except OSError:
-                pass
+            except OSError as exc:
+                # 加密文件已经写好，旧明文文件删不掉只是留下冗余，不影响数据正确性
+                log.debug("删除旧明文文件失败（可忽略）：%s", exc)
 
 
 __all__ = [

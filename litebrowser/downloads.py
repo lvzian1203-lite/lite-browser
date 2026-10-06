@@ -194,8 +194,9 @@ class DownloadManager(QObject):
             self.vault.write_text(
                 json.dumps(payload, ensure_ascii=False), self.blob_path, self.legacy_path
             )
-        except OSError:
-            pass
+        except OSError as exc:
+            # 保存记录失败不应打断正在进行的下载，但必须留下线索
+            log.warning("保存下载记录失败：%s", exc)
 
     # -- 下载目录 --------------------------------------------------------- #
     def default_folder(self) -> Path:
@@ -283,8 +284,8 @@ class DownloadManager(QObject):
         if item.cancel_callback is not None:
             try:
                 item.cancel_callback()
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001 - 取消回调失败也要继续标记为已取消
+                log.debug("下载取消回调失败：%s", exc)
         item.state = STATE_CANCELED
         item.finished_at = time.time()
         self.save()
@@ -332,11 +333,12 @@ class DownloadManager(QObject):
             return
         if sys.platform == "win32":
             try:
+                # 首选"打开文件夹并选中文件"
                 subprocess.Popen(["explorer", "/select,", str(item.path)])
                 return
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001 - 退回只打开文件夹
+                log.debug("explorer /select 失败，改为直接打开目录：%s", exc)
         try:
             os.startfile(str(folder))  # type: ignore[attr-defined]
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001 - 系统没有关联程序时只能放弃
+            log.warning("打开下载目录失败：%s", exc)
