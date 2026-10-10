@@ -11,6 +11,8 @@ lite browser 支持两种 Chromium 内核：
 from __future__ import annotations
 
 import logging
+import time
+import uuid
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -290,6 +292,26 @@ class BrowserEngine(QWidget):
         """清理 localStorage / IndexedDB 等站点数据。"""
 
     # -- 错误页 / 保存 / 打印 --------------------------------------------- #
+    #: 内置页面残留文件的回收阈值（秒）：只回收程序异常退出遗留的孤儿文件
+    PAGE_MAX_AGE = 3600.0
+
+    @staticmethod
+    def _sweep_stale(folder: Path, max_age: float = PAGE_MAX_AGE) -> None:
+        """回收过期的内置页面残留文件。
+
+        绝不能按 ``internal-*`` 前缀全量删除：所有标签页共享同一个数据目录，
+        那样会把**其它标签页正在显示**的错误页文件一并删掉，
+        用户刷新时就会看到「文件不存在」。这里按修改时间过滤，
+        只清理超龄（程序异常退出遗留）的孤儿文件。
+        """
+        now = time.time()
+        for stale in folder.glob("internal-*.html"):
+            try:
+                if now - stale.stat().st_mtime > max_age:
+                    stale.unlink()
+            except OSError as lite_exc:
+                log.debug("清理过期内置页面失败：%s", lite_exc)
+
     def show_error_page(self, html: str, url: str = "") -> None:
         """显示内置页面。
 
@@ -297,22 +319,20 @@ class BrowserEngine(QWidget):
         比 NavigateToString / setHtml 更稳（不会与被取消的导航互相触发），
         两个内核也共用同一套实现。地址栏显示 ``address_override``
         （即用户实际访问的网址），不会暴露内部临时文件路径。
+
+        文件名使用随机 UUID：每个标签页都是独立的 ``BrowserEngine`` 实例，
+        如果按实例内计数器命名，多个标签页会写出同名文件并互相覆盖。
         """
         if url:
             self.address_override = url
         try:
             folder = data_dir() / "pages"
             folder.mkdir(parents=True, exist_ok=True)
-            for stale in folder.glob("internal-*.html"):
-                try:
-                    stale.unlink()
-                except OSError as lite_exc:
-                    log.debug("忽略异常：%s", lite_exc)
-                    pass
-            self._page_seq = getattr(self, "_page_seq", 0) + 1
-            path = folder / f"internal-{self._page_seq}.html"
+            self._sweep_stale(folder)
+            path = folder / f"internal-{uuid.uuid4().hex}.html"
             path.write_text(html, encoding="utf-8")
-        except OSError:
+        except OSError as lite_exc:
+            log.warning("写入内置页面失败，将无法显示该页面：%s", lite_exc)
             return
         self._internal_page = True
         self.load(path.as_uri())
