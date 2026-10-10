@@ -97,8 +97,10 @@ def _shortcuts_table(window=None) -> str:
 
 
 def _themes_list() -> str:
-    items = "".join(f"<li>{name}<code style='color:#888'>（{key}）</code></li>"
-                    for key, name in theme.theme_names())
+    items = "".join(
+        f"<li>{tr(name)}<code style='color:#888'>（{key}）</code></li>"
+        for key, name in theme.theme_names()
+    )
     return f"<ul>{items}</ul>"
 
 
@@ -106,9 +108,10 @@ def _engines_table(current: str = "") -> str:
     from .engine import ENGINE_LABELS
 
     rows = "".join(
-        f"<tr><td>{label}</td></tr>" for label in ENGINE_LABELS.values()
+        f"<tr><td>{tr(label)}</td></tr>" for label in ENGINE_LABELS.values()
     )
-    note = trf('<p>当前使用：<b>{0}</b></p>', ENGINE_LABELS.get(current, current or '自动选择')) if current else ""
+    note = trf('<p>当前使用：<b>{0}</b></p>',
+               tr(ENGINE_LABELS.get(current, current or '自动选择'))) if current else ""
     return f"<table cellspacing='0' cellpadding='4' width='100%'>{rows}</table>{note}"
 
 
@@ -163,7 +166,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "start", tr("快速上手"),
             f"""
             <h3>{APP_NAME} {APP_VERSION}</h3>
-            <p>一款用 Python 编写的轻量浏览器，界面为仿 Windows 经典风格，作者 <b>{AUTHOR}</b>。</p>
+            <p>{tr('一款用 Python 编写的轻量浏览器，界面为仿 Windows 经典风格，作者')} <b>{AUTHOR}</b>{tr('。')}</p>
             <p><b>视频播不了？</b>先看「帮助 → 视频播放自检」，
             它会直接告诉你当前内核支不支持 H.264。</p>
             <ul>
@@ -313,8 +316,8 @@ def sections(window=None, config=None) -> list[Topic]:
             "theme", tr("主题与界面自定义"),
             f"""
             <ul>
-              <li><b>{len(theme.THEME_ORDER)} 种 UI 风格</b>：「设置 → 外观 → 界面风格」，
-                  切换立即生效，无需重启。</li>
+              <li><b>{len(theme.THEME_ORDER)}{tr(' 种 UI 风格')}</b>{tr('：「设置 → 外观 → 界面风格」，')}
+                  {tr('切换立即生效，无需重启。')}</li>
               {_themes_list()}
               <li><b>深色 / 浅色</b>：同一位置切换，所有对话框（含设置页内的说明文字）
                   都会跟着变换，保证可读性；也可以用菜单
@@ -392,8 +395,8 @@ def sections(window=None, config=None) -> list[Topic]:
         Topic(
             "engine", tr("渲染引擎说明"),
             f"""
-            <p>程序内置两种 Chromium 内核，启动时自动选择，也可在
-            「设置 → 外观 → 渲染引擎」强制指定（切换后需重启程序）。</p>
+            <p>{tr('程序内置两种 Chromium 内核，启动时自动选择，也可在')}
+            {tr('「设置 → 外观 → 渲染引擎」强制指定（切换后需重启程序）。')}</p>
             {_engines_table(current_engine)}
             <ul>
               <li><b>Edge WebView2</b>（默认）：使用系统自带 Edge 运行时，
@@ -549,10 +552,10 @@ def sections(window=None, config=None) -> list[Topic]:
             "about", tr("关于与版权"),
             f"""
             <ul>
-              <li>名称：<b>{APP_NAME}</b></li>
-              <li>版本：<b>{APP_VERSION}</b></li>
-              <li>作者：<b>{AUTHOR}</b></li>
-              <li>版权：{COPYRIGHT}</li>
+              <li>{tr('名称：')}<b>{APP_NAME}</b></li>
+              <li>{tr('版本：')}<b>{APP_VERSION}</b></li>
+              <li>{tr('作者：')}<b>{AUTHOR}</b></li>
+              <li>{tr('版权：')}{COPYRIGHT}</li>
               <li>技术栈：Python + PySide6（Qt 6）+ Edge WebView2 / QtWebEngine + pythonnet</li>
               <li>界面图标全部由代码绘制，不含任何第三方素材。</li>
             </ul>

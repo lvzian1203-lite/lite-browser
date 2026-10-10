@@ -14,20 +14,16 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication, QDialog, QMessageBox, QStyleFactory
 
 from . import icons, logging_setup, theme
-from .console import configure_output
-from .bookmarks import BookmarkStore
-from .browser import MainWindow
 from .config import APP_NAME, APP_VERSION, AUTHOR, ORG_NAME, Config, data_dir
+from .console import configure_output
 from .crypto import CRYPTO_AVAILABLE, DataVault
-from .dialogs import PasswordDialog
-from .downloads import DownloadManager
-from .engine import ENGINE_WEBVIEW2, prepare_engine, resolve_engine
-from .history import HistoryStore
-from .netsec import SecurityManager
-from .performance import PerformanceManager
-from .widgets import StartupSplash
-
 from .i18n import apply_language_from_config, tr, trf
+
+# 注意：界面模块（browser / dialogs / netsec / useragent …）**不能**在文件顶部导入。
+# 它们有不少模块级的 tr() 调用（如 UA 预设名、诊断项名称），
+# 而模块级代码在导入时就执行——那时还没读到配置里的 ui_language，
+# 结果会把这些字符串永久固定在中文（实测英文界面里仍显示"默认（跟随内核）"）。
+# 因此改为在 main() 里先定语言、再导入界面模块。
 
 log = logging.getLogger(__name__)
 
@@ -108,6 +104,8 @@ def _open_vault() -> DataVault | None:
         return vault
 
     # 已有口令保护，需要用户输入
+    from .dialogs import PasswordDialog
+
     for _attempt in range(3):
         dialog = PasswordDialog(
             None,
@@ -143,6 +141,8 @@ def _run_env_report() -> int:
     config = Config()
     # 语言必须在创建任何界面文字之前定好
     apply_language_from_config(config)
+    from .engine import resolve_engine
+
     engine_id = resolve_engine(str(config.get("engine") or "auto"))
     checks = diagnose(engine_id)
     text = report_text(checks) + trf('\n当前内核：{0}\n', engine_id)
@@ -198,6 +198,16 @@ def main(argv: list[str] | None = None) -> int:
     config = Config()
     # 语言必须在创建任何界面文字之前定好
     apply_language_from_config(config)
+    # 语言定好之后再导入界面模块：它们的模块级 tr() 依赖当前语言
+    from .bookmarks import BookmarkStore
+    from .browser import MainWindow
+    from .dialogs import PasswordDialog
+    from .downloads import DownloadManager
+    from .engine import ENGINE_WEBVIEW2, prepare_engine, resolve_engine
+    from .history import HistoryStore
+    from .netsec import SecurityManager
+    from .performance import PerformanceManager
+    from .widgets import StartupSplash
     engine_id = resolve_engine(str(config.get("engine") or "auto"))
     # QtWebEngine 必须在创建 QApplication 之前导入
     prepare_engine(engine_id)

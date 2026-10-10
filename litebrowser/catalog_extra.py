@@ -33,6 +33,24 @@ EXTRA: dict[str, str] = {
     # ---- 默认书签标题 ----
     "必应搜索": "Bing Search",
     "百度": "Baidu",
+    # ---- 内核名称（帮助表格与设置页）----
+    "Edge WebView2（Chromium，含 H.264/AAC）": "Edge WebView2 (Chromium, with H.264/AAC)",
+    "QtWebEngine（Chromium，仅开源编解码器）": "QtWebEngine (Chromium, open codecs only)",
+    "自动选择": "Automatic",
+    # ---- 帮助正文里「标签 + 动态值」混排的片段 ----
+    '一款用 Python 编写的轻量浏览器，界面为仿 Windows 经典风格，作者': 'A lightweight browser written in Python with a classic Windows look. Author',
+    '。': '.',
+    ' 种 UI 风格': ' UI styles',
+    '：「设置 → 外观 → 界面风格」，': ': "Settings → Appearance → UI style",',
+    '切换立即生效，无需重启。': 'Changes take effect immediately; no restart needed.',
+    '程序内置两种 Chromium 内核，启动时自动选择，也可在': 'Two Chromium engines are bundled; the browser picks one automatically at startup, or you can force one in',
+    '「设置 → 外观 → 渲染引擎」强制指定（切换后需重启程序）。': '"Settings → Appearance → Rendering engine" (restart required after switching).',
+    '（Ruffle 0.6.0，Rust 编写的 Flash 运行时，编译成 WebAssembly），': '(Ruffle 0.6.0, a Flash runtime written in Rust and compiled to WebAssembly),',
+    '名称：': 'Name: ',
+    '版本：': 'Version: ',
+    '作者：': 'Author: ',
+    '版权：': 'License: ',
+
     # ---- 其它固定文案 ----
     "中文（简体）": "Chinese (Simplified)",
     "界面语言已切换为 {0}。\n菜单与对话框将在重新启动程序后全部生效。":

@@ -207,5 +207,95 @@ class CatalogCoverageTests(unittest.TestCase):
             self.assertTrue(str(value).strip(), f"{key!r} 的译文为空")
 
 
+class NoChineseLeakTests(unittest.TestCase):
+    """英文模式下，长文本也必须真的没有中文残留。
+
+    回归背景：实测出现过三类中英混排——
+    1. 长 f-string 插值后整行与译文键不一致（"7 种 UI 风格：「Settings …」"）；
+    2. 短语替换把中文句子切碎（"直接使用 IP Address访问"）；
+    3. **模块级 tr() 在导入期执行**，而那时还没读到 ui_language，
+       于是 UA 预设名之类永久固定在中文。
+
+    第 3 类必须在"先定语言、再导入界面模块"的顺序下才能复现，
+    所以这里用子进程模拟真实启动顺序（进程内 pytest 早已导入过这些模块）。
+    """
+
+    #: 允许保留的中文：示例数据（站点名、示例网址）
+    ALLOW = ("example.com", "litebrowser.local", "example.org")
+
+    CHECK_SCRIPT = r"""
+import os, re, sys, json, tempfile, pathlib
+
+root = tempfile.mkdtemp(prefix="lite-leak-")
+os.environ["LITE_BROWSER_DATA_DIR"] = root
+pathlib.Path(root, "settings.json").write_text(
+    json.dumps({"ui_language": "en"}), encoding="utf-8"
+)
+
+from PySide6.QtWidgets import QApplication
+app = QApplication(sys.argv)
+
+from litebrowser.config import Config
+from litebrowser.i18n import apply_language_from_config, tr, tr_text
+
+config = Config()
+apply_language_from_config(config)          # 真实启动顺序：先定语言
+
+import litebrowser.help as helpmod          # 再导入界面模块
+from litebrowser.errors import error_page, warning_page
+from litebrowser.netsec import SecurityManager
+
+CJK = re.compile(r"[\u4e00-\u9fff]")
+ALLOW = ("example.com", "litebrowser.local", "example.org")
+leaks = []
+
+for topic in helpmod.sections():
+    for label, rendered in (("title", tr(topic.title)), ("body", tr_text(topic.body))):
+        for line in rendered.splitlines():
+            if CJK.search(line) and not any(a in line for a in ALLOW):
+                leaks.append(f"{topic.key}/{label}: " + re.sub(r"<[^>]+>", "", line).strip()[:70])
+
+class _Cfg:
+    def get(self, key, default=None):
+        return {"block_malicious": True}.get(key, default)
+    def set(self, key, value, save=True):
+        return None
+
+verdict = SecurityManager(_Cfg(), pathlib.Path(root)).check_url("http://93.184.216.34/")
+pages = {
+    "error_page": error_page("https://example.com/x", 404, "Not Found"),
+    "warning_page": warning_page("http://93.184.216.34/", list(verdict.reasons)),
+}
+for name, html in pages.items():
+    body = re.sub(r"<style>.*?</style>", "", html, flags=re.S)
+    body = re.sub(r"<script>.*?</script>", "", body, flags=re.S)
+    body = re.sub(r"<[^>]+>", "", body)
+    for line in body.splitlines():
+        if CJK.search(line) and not any(a in line for a in ALLOW):
+            leaks.append(f"{name}: {line.strip()[:70]}")
+
+print("LEAKS=" + str(len(leaks)))
+for item in leaks[:20]:
+    print("  " + item)
+"""
+
+    def test_no_chinese_leak_in_real_startup_order(self) -> None:
+        import subprocess
+
+        result = subprocess.run(
+            [sys.executable, "-c", self.CHECK_SCRIPT],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cwd=str(ROOT),
+        )
+        self.assertEqual(result.returncode, 0,
+                         f"子进程检查失败：{result.stderr[-400:]}")
+        self.assertIn("LEAKS=0", result.stdout,
+                      f"英文界面里仍有中文：\n{result.stdout[-800:]}")
+
+    def test_no_translation_value_contains_chinese(self) -> None:
+        bad = {key: value for key, value in i18n.catalog().items() if CJK.search(value or "")}
+        self.assertEqual(bad, {}, f"译文里不应含中文：{list(bad.items())[:5]}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

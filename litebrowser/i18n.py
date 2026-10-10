@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from typing import Any
 
 log = logging.getLogger(__name__)
@@ -119,13 +120,39 @@ def trf(template: str, *args: Any) -> str:
             return template
 
 
+def _replace_phrases(text: str, *, max_length: int = 60) -> str:
+    """按"已知短语最长优先"替换文本里的中文片段（保标签、保排版）。
+
+    两条安全约束，缺一不可：
+
+    1. 只接受**短短语**：整句译文被塞进另一句话里会拼出病句
+       （例如"启动时自动选择"与"自动选择"叠加成 "On startupAutomatic"）；
+    2. 短语必须**独立出现**（两侧不能紧邻其它中文）：
+       否则短词会被插进无关的中文句子里——实测出现过
+       "直接使用 IP 地址访问" 被替换成 "直接使用 IP Address访问"。
+    """
+    result = text
+    for phrase in sorted(_catalog, key=len, reverse=True):
+        if len(phrase) < 2 or len(phrase) > max_length:
+            continue
+        if "{" in phrase or "<" in phrase or "\n" in phrase:
+            continue
+        pattern = re.compile(
+            r"(?<![\u4e00-\u9fff])" + re.escape(phrase) + r"(?![\u4e00-\u9fff])"
+        )
+        if pattern.search(result):
+            result = pattern.sub(lambda _match, value=_catalog[phrase]: value, result)
+    return result
+
+
 def tr_text(text: str) -> str:
-    """长文本（错误页 HTML、帮助正文、诊断报告）的短语级翻译。
+    """长文本（错误页 HTML、帮助正文、诊断报告）的逐行翻译。
 
-    这类内容动辄几百字，整体塞进翻译表既臃肿又难维护。
-    这里按"整段 → 逐行 → 逐句"三级查找：命中就替换，没命中就保留中文，
-    因此可以增量翻译——今天翻几行，明天再补几行，界面永远不会崩。
+    这类内容动辄几百字，整体塞进翻译表既臃肿又难维护，
+    因此按"整段 → 逐行"查找：整段命中直接返回；整行命中则替换该行（保留缩进）。
 
+    注意**不做片段级替换**：行结构与译文键对不上时宁可保留中文，
+    也不能把半句英文拼进中文句子里（那会变成病句，比不翻译更糟）。
     中文环境下**原样返回**，没有任何额外开销。
     """
     if _current == LANGUAGE_ZH or not text:
@@ -140,7 +167,6 @@ def tr_text(text: str) -> str:
             return line
         hit = _catalog.get(stripped)
         if hit:
-            # 保留原有缩进
             indent = line[: len(line) - len(line.lstrip())]
             return indent + hit
         return line
@@ -149,24 +175,14 @@ def tr_text(text: str) -> str:
 
 
 def tr_html(html: str) -> str:
-    """对内置页面的 HTML 做短语级翻译。
+    """对内置页面的 HTML 做短语级翻译（标签与样式原样保留）。
 
-    错误页 / 提示页 / 自检页是一整段几百字的 HTML 模板，整体翻译既臃肿又容易
-    漏掉标签。这里按"已知短语最长优先"做替换：命中的中文片段换成英文，
-    标签与样式原样保留，没命中的部分保持中文。
-
-    中文环境或没有命中时**原样返回**。
+    内置页面是手写的短句集合（按钮、提示），因此可以安全地做短语替换；
+    仍然限制短语长度，避免整句译文被误插进别处。
     """
     if _current == LANGUAGE_ZH or not html:
         return html
-    result = html
-    # 长短语优先，避免"后退"先把"后退到安全页面"里的部分替换掉
-    for phrase in sorted(_catalog, key=len, reverse=True):
-        if len(phrase) < 2 or "{" in phrase or "<" in phrase:
-            continue
-        if phrase in result:
-            result = result.replace(phrase, _catalog[phrase])
-    return result
+    return _replace_phrases(html, max_length=60)
 
 
 def load_catalog(catalog: dict[str, str]) -> int:

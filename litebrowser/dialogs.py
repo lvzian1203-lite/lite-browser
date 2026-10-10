@@ -681,7 +681,9 @@ class SettingsDialog(XPDialog):
         theme_hint = QLabel(
             trf('可切换 {0} 种界面风格（', len(theme.THEME_ORDER))
             + "、".join(
-                name.split("（")[0].split(" (")[0] for _tid, name in theme.theme_names()
+                # 主题名也要跟着界面语言走，否则英文界面里会夹着"经典/哈基米"等中文
+                tr(name).split("（")[0].split(" (")[0]
+                for _tid, name in theme.theme_names()
             )
             + tr("），并支持深色 / 浅色模式；"
             "自定义边框颜色会同时应用到标题栏与窗口边框。切换后立即生效，无需重启。")
@@ -1358,12 +1360,19 @@ class SettingsDialog(XPDialog):
 
     # -- 取值 / 赋值 ------------------------------------------------------ #
     def _load_values(self) -> None:
-        theme_index = self.combo_theme.findData(str(self.config.get("ui_theme") or theme.DEFAULT_THEME))
-        language_index = self.combo_language.findData(
-            i18n.normalize_language(str(self.config.get("ui_language") or ""))
-        )
-        self.combo_language.setCurrentIndex(max(0, language_index))
-        self.combo_theme.setCurrentIndex(max(0, theme_index))
+        # 载入配置时控件会发出 currentIndexChanged，那不是用户操作：
+        # 用标志位挡住，否则切换语言的处理函数会在构造期间弹出模态提示框
+        # （实测会让「打开设置」每次都莫名弹一次语言切换提示，甚至阻塞对话框构造）
+        self._loading_values = True
+        try:
+            theme_index = self.combo_theme.findData(str(self.config.get("ui_theme") or theme.DEFAULT_THEME))
+            language_index = self.combo_language.findData(
+                i18n.normalize_language(str(self.config.get("ui_language") or ""))
+            )
+            self.combo_language.setCurrentIndex(max(0, language_index))
+            self.combo_theme.setCurrentIndex(max(0, theme_index))
+        finally:
+            self._loading_values = False
         mode_index = self.combo_mode.findData(str(self.config.get("ui_mode") or "light"))
         self.combo_mode.setCurrentIndex(max(0, mode_index))
         self._accent_color = str(self.config.get("ui_accent") or "")
@@ -1477,6 +1486,10 @@ class SettingsDialog(XPDialog):
     def _on_language_changed(self, *_args) -> None:
         """切换界面语言：立即写入配置，重启后整体生效。"""
         code = str(self.combo_language.currentData() or i18n.DEFAULT_LANGUAGE)
+        current = i18n.normalize_language(str(self.config.get("ui_language") or ""))
+        if getattr(self, "_loading_values", False) or code == current:
+            # 载入配置时的信号、或用户选了同一个语言：什么都不做
+            return
         i18n.set_language(code)          # 让随后新建的对话框立刻用新语言
         self.config.set("ui_language", code)
         self._mark_dirty()
