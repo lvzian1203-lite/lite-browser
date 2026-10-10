@@ -1,7 +1,7 @@
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(1, 7, 0, 0),
-    prodvers=(1, 7, 0, 0),
+    filevers=(1, 7, 1, 0),
+    prodvers=(1, 7, 1, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -17,12 +17,12 @@ VSVersionInfo(
           [
             StringStruct('CompanyName', 'lvzian'),
             StringStruct('FileDescription', 'lite browser - 基于 Chromium 内核的仿 Windows XP 风格浏览器'),
-            StringStruct('FileVersion', '1.7.0'),
+            StringStruct('FileVersion', '1.7.1'),
             StringStruct('InternalName', 'lite browser'),
             StringStruct('LegalCopyright', 'Copyright (C) 2026 lvzian'),
             StringStruct('OriginalFilename', 'lite browser.exe'),
             StringStruct('ProductName', 'lite browser'),
-            StringStruct('ProductVersion', '1.7.0')
+            StringStruct('ProductVersion', '1.7.1')
           ]
         )
       ]

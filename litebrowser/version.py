@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 APP_NAME = "lite browser"
-APP_VERSION = "1.7.0"
+APP_VERSION = "1.7.1"
 BUILD_YEAR = "2026"
 AUTHOR = "lvzian"
 ORG_NAME = "LiteBrowser"
