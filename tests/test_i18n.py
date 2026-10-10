@@ -297,5 +297,54 @@ for item in leaks[:20]:
         self.assertEqual(bad, {}, f"译文里不应含中文：{list(bad.items())[:5]}")
 
 
+class DataNotTranslatedTests(unittest.TestCase):
+    """写进用户数据文件的文字**不能**跟着界面语言变。
+
+    回归背景：自动包装工具曾把 ``blocklist.txt`` 的文件头也包成 ``tr(...)``。
+    虽然当时译文表里映射为原文、没出问题，但这是隐患：
+    一旦补上译文，英文界面就会把用户数据文件写成英文，破坏既有数据形态。
+    """
+
+    HEADER = "# lite browser 网址黑名单（每行一个域名，# 注释，! 表示白名单）"
+
+    def setUp(self) -> None:
+        i18n.set_language("en")      # 故意用英文环境
+
+    def tearDown(self) -> None:
+        i18n.set_language(i18n.DEFAULT_LANGUAGE)
+
+    def test_blocklist_header_stays_chinese(self) -> None:
+        import tempfile
+
+        from litebrowser.netsec import SecurityManager
+
+        class _Config:
+            def get(self, key, default=None):
+                return {"block_malicious": True}.get(key, default)
+
+            def set(self, key, value, save=True):  # noqa: A003
+                return None
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manager = SecurityManager(_Config(), root)
+            manager._write_default_list()
+            manager.add_blocked("ads.example.com")
+            first = (root / "blocklist.txt").read_text(encoding="utf-8").splitlines()[0]
+        self.assertEqual(first, self.HEADER,
+                         "英文环境下 blocklist.txt 的文件头也必须保持中文原文")
+
+    def test_source_does_not_translate_file_content(self) -> None:
+        """静态检查：写文件的那行不允许出现 tr()。"""
+        path = ROOT / "litebrowser" / "netsec.py"
+        source = path.read_text(encoding="utf-8")
+        offenders = [
+            line.strip()
+            for line in source.splitlines()
+            if "网址黑名单（每行一个域名" in line and "tr(" in line
+        ]
+        self.assertEqual(offenders, [], f"数据文件内容被包进了 tr()：{offenders}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

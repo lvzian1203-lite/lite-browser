@@ -193,8 +193,11 @@ class SecurityManager(QObject):
         self.changed.emit()
 
     def save(self) -> None:
+        # 这行是**写进 blocklist.txt 的文件内容**（文件格式说明），不是界面文字，
+        # 因此**不能**走 tr()：否则英文界面下会把文件头写成英文，
+        # 既改变了用户数据的既有形态，也让格式说明与其它文档对不上。
         lines = [
-            tr("# lite browser 网址黑名单（每行一个域名，# 注释，! 表示白名单）"),
+            "# lite browser 网址黑名单（每行一个域名，# 注释，! 表示白名单）",
         ]
         lines += sorted(self._blocked)
         lines += ["!" + item for item in sorted(self._allowed)]
