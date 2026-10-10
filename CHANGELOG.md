@@ -54,6 +54,15 @@ lite browser 从 **v1.1.0086** 到 **v1.6.95** 的完整更新记录（按版本
   现在改为**合并写盘**：``record()`` 只置脏标记，由 2 秒单次定时器统一落盘；
   程序退出（``closeEvent``）调用 ``flush_now()`` 保证不丢数据；
   删除/清空仍立即写盘。实测连续 20 次访问由 20 次全量加密写盘降为 1 次。
+* **非中文系统上命令行工具中文输出崩溃**：
+  在英文 / 其它区域的 Windows 上，当标准输出被重定向（管道、文件、CI 捕获 stdout）
+  时，Python 用系统 ANSI 代码页（英文系统 cp1252）编码，打印中文会抛
+  ``UnicodeEncodeError: 'charmap' codec can't encode characters`` ——
+  实测 ``PYTHONIOENCODING=cp1252 python tools/decrypt_data.py --list`` 直接退出码 1。
+  这对**数据恢复**工具尤其致命（用户很可能在非中文系统上把结果重定向到文件）。
+  新增零依赖的 ``litebrowser/console.py``：输出到真实控制台时只放宽
+  ``errors=replace``（中文照旧正常显示），输出被重定向时改用 UTF-8；
+  ``tools/decrypt_data.py`` 与 ``main.py --env-report`` 均已接入。
 
 ### 改进
 
@@ -69,15 +78,25 @@ lite browser 从 **v1.1.0086** 到 **v1.6.95** 的完整更新记录（按版本
 
 ### 测试
 
-* 新增 ``tests/test_engine_pages.py``（9）、``tests/test_address_bar.py``（8）、
-  ``tests/test_package_import.py``（8）、``tests/test_history_flush.py``（12）。
+* 新增 ``tests/test_engine_pages.py``（9）、``tests/test_address_bar.py``（13）、
+  ``tests/test_package_import.py``（11）、``tests/test_history_flush.py``（12）。
   其中错误页与地址栏两组用例**在修复前实测失败**（分别为
   「5 个标签页应有 5 个不同文件 1 != 5」「A 的错误页内容被 B 覆盖」
   「'https://cn.bing.com/' != 'baidu.com'」），修复后全部通过。
-* 用例总数 104 → **141**；``ruff check litebrowser tests`` 无告警。
+* 用例总数 104 → **149**；``ruff check litebrowser tests`` 无告警。
 * 既有用例 ``test_persistence_round_trip`` 由"record() 立即可见"改为
   显式 ``flush_now()`` 后验证可读回——这属于被本次有意修改的实现细节，
   断言语义（数据能持久化并被读回）没有削弱。
+* **CI 修复过程记录**（对后续维护有用）：
+  1. 首次推送（``7261285``）CI 失败，失败步骤是「运行单元测试」；
+  2. 第一轮修复（``f079ebf``）以为是无桌面环境导致 ``hasFocus()`` 为 False，
+     把地址栏测试改成不依赖平台焦点的替身方案，并给 workflow 加了
+     ``QT_QPA_PLATFORM=offscreen`` —— 仍然失败；
+  3. 第二轮定位到真因（``4d43666``）：新测试暴露的是上面那条
+     **cp1252 编码缺陷**。修复后 CI 通过（run #6 = success）。
+  教训：job 日志下载需要 token（匿名访问返回 403），本次是靠"在本地
+  用 ``PYTHONIOENCODING=cp1252`` 复现 runner 的英文区域环境"定位的；
+  以后排查 CI 差异时，优先复现"区域 / 编码 / 无桌面"这三类环境差异。
 
 ### 已评议但本版未采纳的建议
 

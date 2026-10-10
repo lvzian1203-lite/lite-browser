@@ -228,7 +228,7 @@ liulanqi/
 │  ├─ slim_dist.py          打包后按依赖关系精简体积
 │  └─ version_info.txt      exe 版本信息（公司名 lvzian）
 ├─ assets/  docs/           图标资源 / 截图与解码自检页
-├─ tests/                   单元测试（104 个用例，仅依赖标准库 unittest）
+├─ tests/                   单元测试（149 个用例，仅依赖标准库 unittest）
 ├─ .github/workflows/       GitHub Actions：windows 上跑 pytest + ruff
 ├─ dist/lite browser/       【已打包好的 exe】双击 lite browser.exe 即可运行
 ├─ run.bat                  源码方式启动
@@ -303,7 +303,7 @@ python -m unittest discover -s tests -t .      rem 运行全部单元测试
 python -m unittest tests.test_safefetch -v     rem 只跑某一个模块
 ```
 
-共 **104 个用例**，覆盖 SSRF 防护（地址类别、scheme、跳转链与次数上限、体积与类型限制）、
+共 **149 个用例**，覆盖 SSRF 防护（地址类别、scheme、跳转链与次数上限、体积与类型限制）、
 Ruffle 会话 token、可疑网址判定的误报/漏报统计、广告屏蔽规则与注入脚本、
 AES-256-GCM 加解密与失败路径、历史记录 / 下载管理 / 配置 / 地址栏输入归一化。
 
@@ -423,7 +423,7 @@ QtWebEngine 引擎下可用软件渲染启动：`"lite browser.exe" --disable-gp
 4. **解密工具不再依赖 PySide6**：新增零依赖的 `litebrowser/version.py` +
    包级惰性导入，未安装 Qt 的环境也能用 `tools/decrypt_data.py` 抢救数据
    （数据恢复场景下要求先装 200MB+ 的 Qt 并不合理）。
-5. 测试用例 104 → **141**，`ruff` 无告警。
+5. 测试用例 104 → **149**，`ruff` 无告警；另修复非中文系统上命令行工具的中文输出崩溃。
 
 ### 1.7.0
 
