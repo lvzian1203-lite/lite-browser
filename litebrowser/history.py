@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from .crypto import DataVault
+
+log = logging.getLogger(__name__)
 
 WEEKDAYS = ("星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日")
 
@@ -70,9 +73,18 @@ class HistoryEntry:
 
 
 class HistoryStore(QObject):
-    """历史记录集合，写入加密文件 ``data/history.dat``。"""
+    """历史记录集合，写入加密文件 ``data/history.dat``。
+
+    写盘策略：``record()`` 只标记脏数据并启动合并定时器，不立即写盘。
+    原因是每次访问都要 O(n) 去重 + 序列化全部记录 + AES-256-GCM 加密 + 同步写盘，
+    而这一切都发生在 UI 线程；记录越多、使用越久就越慢。
+    程序退出路径会调用 :meth:`flush_now` 保证不丢数据。
+    """
 
     changed = Signal()
+
+    #: 写盘合并窗口（毫秒）：这段时间内的多次记录只写一次盘
+    FLUSH_DELAY_MS = 2000
 
     def __init__(self, vault: DataVault, data_dir: Path, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -81,6 +93,12 @@ class HistoryStore(QObject):
         self.legacy_path = Path(data_dir) / "history.json"
         self.max_entries = 20000
         self._entries: list[HistoryEntry] = []
+        #: 是否有尚未落盘的改动
+        self._dirty = False
+        self._flush_timer = QTimer(self)
+        self._flush_timer.setSingleShot(True)
+        self._flush_timer.setInterval(self.FLUSH_DELAY_MS)
+        self._flush_timer.timeout.connect(self._flush)
         self.load()
 
     # -- 持久化 ----------------------------------------------------------- #
@@ -104,6 +122,7 @@ class HistoryStore(QObject):
         self._entries = entries[: self.max_entries]
 
     def save(self) -> None:
+        """立即写入磁盘（数据格式保持 {"version":1,"entries":[...]} + AES 不变）。"""
         payload = {
             "version": 1,
             "entries": [entry.to_dict() for entry in self._entries],
@@ -112,8 +131,30 @@ class HistoryStore(QObject):
             self.vault.write_text(
                 json.dumps(payload, ensure_ascii=False), self.blob_path, self.legacy_path
             )
-        except OSError:
-            pass
+        except OSError as exc:
+            log.warning("保存历史记录失败：%s", exc)
+            return
+        self._dirty = False
+
+    def mark_dirty(self) -> None:
+        """标记有改动，合并到稍后一次性写盘（避免每次导航都全量加密写盘）。"""
+        self._dirty = True
+        if not self._flush_timer.isActive():
+            self._flush_timer.start()
+
+    def _flush(self) -> None:
+        if not self._dirty:
+            return
+        self.save()
+
+    def flush_now(self) -> None:
+        """立刻落盘：程序退出等关键节点必须调用，否则会丢掉最后几秒的记录。"""
+        self._flush_timer.stop()
+        self._flush()
+
+    def has_pending_writes(self) -> bool:
+        """是否有尚未落盘的改动（诊断 / 测试用）。"""
+        return self._dirty
 
     # -- 记录 ------------------------------------------------------------- #
     def record(self, url: str, title: str) -> Optional[HistoryEntry]:
@@ -129,7 +170,7 @@ class HistoryStore(QObject):
                 entry.visited_at = now
                 entry.visit_count += 1
                 self._sort()
-                self.save()
+                self.mark_dirty()
                 self.changed.emit()
                 return entry
 
@@ -137,7 +178,7 @@ class HistoryStore(QObject):
         self._entries.insert(0, entry)
         if len(self._entries) > self.max_entries:
             del self._entries[self.max_entries:]
-        self.save()
+        self.mark_dirty()
         self.changed.emit()
         return entry
 

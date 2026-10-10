@@ -1966,6 +1966,10 @@ class MainWindow(XPWindow):
                     self.config.set("last_url", url, save=False)
             self._save_session()
             self.config.save()
+            # 历史记录采用合并写盘（见 HistoryStore.mark_dirty）：
+            # 退出时必须立即落盘，否则会丢掉最后几秒内的访问记录
+            if self.history is not None:
+                self.history.flush_now()
         except Exception as lite_exc:
             log.debug("忽略异常：%s", lite_exc)
             pass

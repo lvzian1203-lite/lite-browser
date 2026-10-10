@@ -84,6 +84,10 @@ class HistoryTests(unittest.TestCase):
 
     def test_persistence_round_trip(self) -> None:
         self.store.record("https://example.com/", "标题")
+        # 访问记录自 v1.7.1 起改为「合并写盘」：record() 只置脏，
+        # 由 2 秒定时器或程序退出时的 flush_now() 落盘。
+        # 这里显式 flush，模拟程序正常退出后再验证数据可读回。
+        self.store.flush_now()
         reopened = HistoryStore(_vault(self.root), self.root)
         self.assertEqual(len(reopened.entries()), 1)
         self.assertEqual(reopened.entries()[0].title, "标题")
