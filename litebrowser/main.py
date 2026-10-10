@@ -14,6 +14,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication, QDialog, QMessageBox, QStyleFactory
 
 from . import icons, logging_setup, theme
+from .console import configure_output
 from .bookmarks import BookmarkStore
 from .browser import MainWindow
 from .config import APP_NAME, APP_VERSION, AUTHOR, ORG_NAME, Config, data_dir
@@ -157,6 +158,8 @@ def _run_env_report() -> int:
     written = False
     try:
         if sys.stdout is not None:
+            # 输出被重定向时改用 UTF-8，避免英文系统上中文报告编码失败
+            configure_output()
             sys.stdout.write(text + f"\n报告已保存：{target}\n")
             written = True
     except Exception as lite_exc:

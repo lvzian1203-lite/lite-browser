@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from litebrowser.console import configure_output  # noqa: E402
 from litebrowser.crypto import CRYPTO_AVAILABLE, DataVault, VaultError  # noqa: E402
 
 DATA_FILES = {
@@ -60,6 +61,8 @@ def print_status(data_dir: Path, vault: DataVault) -> None:
 
 
 def main() -> int:
+    # 输出被重定向时改用 UTF-8：本工具可能在英文系统上运行（见 litebrowser/console.py）
+    configure_output()
     parser = argparse.ArgumentParser(
         description="lite browser 数据解密工具（导出明文 JSON）",
         formatter_class=argparse.RawDescriptionHelpFormatter,

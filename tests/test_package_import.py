@@ -40,13 +40,19 @@ sys.path.insert(0, r'{root}')
 """
 
 
-def run_without_qt(body: str, *, cwd: Path | None = None) -> subprocess.CompletedProcess:
-    """在屏蔽 PySide6 的子进程里执行 Python 代码。"""
-    code = BLOCKER.format(root=str(ROOT)) + body
+def run_without_qt(body: str, *, cwd: Path | None = None,
+                   extra_env: dict | None = None, block_qt: bool = True,
+                   ) -> subprocess.CompletedProcess:
+    """在子进程里执行 Python 代码（默认屏蔽 PySide6）。"""
+    code = (BLOCKER.format(root=str(ROOT)) if block_qt else
+            f"import sys\nsys.path.insert(0, r'{ROOT}')\n") + body
+    env = {**os.environ, "PYTHONPATH": str(ROOT)}
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         [sys.executable, "-c", code],
         capture_output=True, text=True, encoding="utf-8", errors="replace",
-        cwd=str(cwd or ROOT),
+        cwd=str(cwd or ROOT), env=env,
     )
 
 
@@ -186,6 +192,68 @@ class DecryptToolWithoutQtTests(unittest.TestCase):
         self.assertIn("history.json", exported)
         payload = json.loads((out / "bookmarks.json").read_text(encoding="utf-8"))
         self.assertIn("example.com", json.dumps(payload, ensure_ascii=False))
+
+    def test_tool_runs_with_non_utf8_locale(self) -> None:
+        """英文 / 其它区域 Windows（ANSI 代码页 cp1252）下也必须能跑。
+
+        回归背景：输出被重定向时 Python 用系统 ANSI 代码页编码，打印中文会抛
+        ``UnicodeEncodeError: 'charmap' codec can't encode characters``，
+        导致解密工具在非中文系统上直接崩溃（GitHub Actions 的英文 runner
+        也复现了这一点）。修复见 ``litebrowser/console.py``。
+        """
+        data = self._make_data_dir()
+        out = self.root / "export_cp1252"
+        tool = str(ROOT / "tools" / "decrypt_data.py")
+        env = {"PYTHONIOENCODING": "cp1252"}
+
+        list_result = run_without_qt(
+            f"import runpy, sys\n"
+            f"sys.argv = ['decrypt_data.py', '--data-dir', r'{data}', '--list']\n"
+            f"runpy.run_path(r'{tool}', run_name='__main__')",
+            extra_env=env,
+        )
+        self.assertEqual(list_result.returncode, 0,
+                         f"cp1252 环境下 --list 崩溃：{list_result.stderr[-300:]}")
+        self.assertIn("加密状态", list_result.stdout, "中文输出应正常可读")
+
+        export_result = run_without_qt(
+            f"import runpy, sys\n"
+            f"sys.argv = ['decrypt_data.py', '--data-dir', r'{data}', '--out', r'{out}']\n"
+            f"runpy.run_path(r'{tool}', run_name='__main__')",
+            extra_env=env,
+        )
+        self.assertEqual(export_result.returncode, 0,
+                         f"cp1252 环境下导出崩溃：{export_result.stderr[-300:]}")
+        self.assertEqual(sorted(p.name for p in out.glob("*.json")),
+                         ["bookmarks.json", "history.json"])
+
+    def test_console_helper_switches_redirected_output_to_utf8(self) -> None:
+        """console.configure_output() 必须让重定向输出可用 UTF-8 打印中文。"""
+        result = run_without_qt(
+            "from litebrowser.console import configure_output\n"
+            "configure_output()\n"
+            "print('中文输出测试 ok')\n"
+            "import sys\n"
+            "print('encoding =', sys.stdout.encoding)\n",
+            extra_env={"PYTHONIOENCODING": "cp1252"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr[-300:])
+        self.assertIn("中文输出测试 ok", result.stdout)
+        self.assertIn("utf-8", result.stdout.lower())
+
+    def test_console_helper_tolerates_broken_stream(self) -> None:
+        """传入不可 reconfigure 的流对象时不应抛异常。"""
+        result = run_without_qt(
+            "from litebrowser.console import configure_output\n"
+            "class Broken:\n"
+            "    def isatty(self): raise ValueError('boom')\n"
+            "    def reconfigure(self, **kw): raise ValueError('boom')\n"
+            "configure_output(Broken(), Broken())\n"
+            "configure_output(None, None)\n"
+            "print('tolerated')\n",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr[-300:])
+        self.assertIn("tolerated", result.stdout)
 
 
 if __name__ == "__main__":
