@@ -1229,6 +1229,9 @@ class MainWindow(XPWindow):
 
     def navigate_from_address(self) -> None:
         target = self.normalize_url(self.address.text(), self.config.search_url)
+        # 本次输入已经提交：清除 modified 标记，让随后到达的页面 URL
+        # 能把地址栏更新成规范化后的网址（例如 baidu.com → https://www.baidu.com/）
+        self.address.setModified(False)
         if target:
             self.navigate(target)
 
@@ -1318,6 +1321,22 @@ class MainWindow(XPWindow):
         title = engine.current_title() or engine.current_url() or "新标签页"
         self.setWindowTitle(f"{title} - {APP_NAME}" if title else APP_NAME)
 
+    @staticmethod
+    def address_keeps_user_input(address, url: str) -> bool:
+        """页面 URL 变化时，地址栏是否应保留用户正在输入的内容。
+
+        用户正在编辑地址栏（有焦点**且**内容被改动过）时，不能用页面上报的 URL
+        覆盖它：首页加载完成、页面重定向都会触发 URL 变化，否则刚输入的网址会被
+        悄悄换回旧地址，表现为「按回车没反应」（其实导航到了被覆盖后的旧网址）。
+        """
+        try:
+            if not address.hasFocus() or not address.isModified():
+                return False
+            current = address.text().strip()
+        except AttributeError:  # 理论上不会发生：地址栏不是 QLineEdit 时保守放行
+            return False
+        return current != (url or "").strip()
+
     def _on_url_changed(self, engine: BrowserEngine, url: str) -> None:
         if engine is not self.current_engine():
             return
@@ -1330,7 +1349,10 @@ class MainWindow(XPWindow):
         else:
             if override and not url.lower().startswith("file:"):
                 engine.address_override = ""
-            if url != "about:blank" or not self.address.hasFocus():
+            # 用户正在输入时保留他输入的内容，别被页面 URL 冲掉
+            if not self.address_keeps_user_input(self.address, url) and (
+                url != "about:blank" or not self.address.hasFocus()
+            ):
                 self.address.setText(url)
                 self.address.setCursorPosition(0)
             self.config.set("last_url", url, save=False)
