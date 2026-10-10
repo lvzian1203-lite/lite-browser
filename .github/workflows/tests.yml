@@ -36,4 +36,7 @@ jobs:
       - name: 运行单元测试
         env:
           LITE_BROWSER_DATA_DIR: ${{ runner.temp }}\litebrowser-tests
+          # runner 没有交互桌面：用 offscreen 平台插件，
+          # 保证控件类测试（QWidget / QApplication）行为确定
+          QT_QPA_PLATFORM: offscreen
         run: python -m pytest tests -v
