@@ -15,12 +15,16 @@ from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 
-APP_NAME = "lite browser"
-APP_VERSION = "1.7.0"
-BUILD_YEAR = "2026"
-AUTHOR = "lvzian"
-ORG_NAME = "LiteBrowser"
-COPYRIGHT = f"Copyright (C) {BUILD_YEAR} {AUTHOR}"
+# 版本相关常量定义在零依赖的 version 模块里（供无 Qt 环境的命令行工具使用），
+# 这里重新导出，保持 ``from litebrowser.config import APP_VERSION`` 兼容。
+from .version import (  # noqa: F401 - 对外重新导出
+    APP_NAME,
+    APP_VERSION,
+    AUTHOR,
+    BUILD_YEAR,
+    COPYRIGHT,
+    ORG_NAME,
+)
 
 DEFAULT_HOMEPAGE = "https://cn.bing.com/"
 
