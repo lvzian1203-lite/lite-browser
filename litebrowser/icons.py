@@ -22,7 +22,7 @@ from PySide6.QtGui import (
     QPolygonF,
 )
 
-_CACHE: dict[tuple[str, int], QIcon] = {}
+_CACHE: dict[tuple[str, int, str], QIcon] = {}
 
 # XP（Luna）常用配色
 XP_BLUE_DARK = QColor("#0A246A")
@@ -34,22 +34,52 @@ XP_YELLOW = QColor("#FFD34A")
 XP_FOLDER = QColor("#F0C14B")
 
 
-def icon(name: str, size: int = 16) -> QIcon:
-    """取得指定名称的图标（带缓存，自动附带 2x/3x 高清版本）。"""
-    key = (name, size)
+def current_nav_style() -> str:
+    """当前主题的导航图标风格（取不到时回退到空字符串＝经典样式）。"""
+    try:
+        from . import theme
+
+        return str(getattr(theme.current(), "nav_style", "") or "")
+    except Exception:  # 主题尚未初始化（例如工具脚本里单独用图标）
+        return ""
+
+
+def resolve_style(name: str, style: str | None = None) -> str:
+    """导航图标与工具栏图标会随主题换风格；其余图标保持统一。"""
+    if name not in NAV_ICONS and name not in _LINE_DRAWERS:
+        return ""
+    chosen = current_nav_style() if style is None else style
+    if name in NAV_ICONS:
+        return chosen if chosen in _STYLED_DRAWERS else ""
+    return chosen if chosen in LINE_STYLES else ""
+
+
+def icon(name: str, size: int = 16, style: str | None = None) -> QIcon:
+    """取得指定名称的图标（带缓存，自动附带 2x/3x 高清版本）。
+
+    ``style`` 用于导航图标的分系统绘制（aero / flat / modern / harmony / fluent），
+    传 None 时自动取当前主题的 ``nav_style``。
+    """
+    resolved = resolve_style(name, style)
+    key = (name, size, resolved)
     cached = _CACHE.get(key)
     if cached is not None:
         return cached
 
     result = QIcon()
     for factor in (1, 2, 3):
-        result.addPixmap(_render(name, size * factor))
+        result.addPixmap(_render(name, size * factor, resolved))
     _CACHE[key] = result
     return result
 
 
-def pixmap(name: str, size: int) -> QPixmap:
-    return _render(name, size)
+def pixmap(name: str, size: int, style: str | None = None) -> QPixmap:
+    return _render(name, size, resolve_style(name, style))
+
+
+def clear_cache() -> None:
+    """主题切换后清空图标缓存（同一图标在不同风格下是不同的图形）。"""
+    _CACHE.clear()
 
 
 def app_icon() -> QIcon:
@@ -60,18 +90,27 @@ def app_icon() -> QIcon:
     return result
 
 
-def _render(name: str, size: int) -> QPixmap:
+def _render(name: str, size: int, style: str = "") -> QPixmap:
     pm = QPixmap(size, size)
     pm.fill(Qt.transparent)
     painter = QPainter(pm)
     painter.setRenderHint(QPainter.Antialiasing, True)
     painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-    drawer = _DRAWERS.get(name)
-    if drawer is not None:
-        try:
+    drawer = None
+    line_drawer = None
+    if style:
+        drawer = _STYLED_DRAWERS.get(style, {}).get(name)
+        if drawer is None and style in LINE_STYLES:
+            line_drawer = _LINE_DRAWERS.get(name)
+    if line_drawer is None and drawer is None:
+        drawer = _DRAWERS.get(name)
+    try:
+        if line_drawer is not None:
+            line_drawer(painter, float(size), _style_accent(style), style == "fluent")
+        elif drawer is not None:
             drawer(painter, float(size))
-        except Exception:  # 图标绘制失败不应影响程序运行
-            pass
+    except Exception:  # 图标绘制失败不应影响程序运行
+        pass
     painter.end()
     return pm
 
@@ -647,6 +686,511 @@ def _draw_cat(p: QPainter, s: float) -> None:
     p.setPen(pen)
     p.drawArc(QRectF(s * 0.34, s * 0.62, s * 0.16, s * 0.14), 200 * 16, 140 * 16)
     p.drawArc(QRectF(s * 0.50, s * 0.62, s * 0.16, s * 0.14), 200 * 16, 140 * 16)
+
+
+
+# --------------------------------------------------------------------------- #
+# 分系统风格的导航图标
+# --------------------------------------------------------------------------- #
+# 每个系统的浏览器在"后退 / 前进 / 停止 / 刷新 / 主页"这几颗按钮上差异最大，
+# 这里按主题的 nav_style 各画一套，让界面在保留边框风格的同时更贴近该系统：
+#   aero    —— Win7/IE8：玻璃球高光 + 粗箭头
+#   flat    —— Win8.1/IE11：细圆环 + 扁平箭头，无渐变
+#   modern  —— Win10/Edge：Fluent 细线箭头，无外框
+#   harmony —— 鸿蒙：粗描边圆头 + 圆形悬停底
+#   paw     —— 哈基米（Win11 风格）：圆角胶囊 + 猫爪元素，同时保持功能可辨识
+CAT_PAW = QColor("#E8892E")
+CAT_PAW_DARK = QColor("#B4701E")
+CAT_PAW_LIGHT = QColor("#FFC97A")
+
+
+def _paw_pad(p: QPainter, cx: float, cy: float, r: float,
+             color: QColor = CAT_PAW, *, toes: int = 3, opacity: int = 255) -> None:
+    """画一个猫爪掌心（含脚趾），供哈基米主题的图标复用。"""
+    saved = p.save()
+    tint = QColor(color)
+    tint.setAlpha(opacity)
+    p.setPen(Qt.NoPen)
+    p.setBrush(tint)
+    # 掌心：略扁的椭圆
+    p.drawEllipse(QRectF(cx - r, cy - r * 0.78, r * 2.0, r * 1.56))
+    # 脚趾
+    spread = r * 1.28
+    for index in range(toes):
+        offset = (index - (toes - 1) / 2.0) * (spread / max(1, toes - 1) * 1.35)
+        p.drawEllipse(QPointF(cx + offset, cy - r * 1.42), r * 0.40, r * 0.46)
+    p.restore()
+
+
+def _stroke(p: QPainter, color: QColor, width: float, *, cap=Qt.RoundCap) -> None:
+    pen = QPen(color, width)
+    pen.setCapStyle(cap)
+    pen.setJoinStyle(Qt.RoundJoin)
+    p.setPen(pen)
+    p.setBrush(Qt.NoBrush)
+
+
+def _chevron(p: QPainter, s: float, x: float, y: float, half: float,
+             thick: float, direction: int, color: QColor) -> None:
+    """画一个 V 形箭头（direction: 1 向右, -1 向左）。"""
+    _stroke(p, color, thick)
+    path = QPainterPath()
+    path.moveTo(x - half * direction, y - half)
+    path.lineTo(x + half * direction, y)
+    path.lineTo(x - half * direction, y + half)
+    p.drawPath(path)
+
+
+# -- Win7 / IE8：玻璃球 + 粗箭头 -------------------------------------------- #
+def _aero_ball(p: QPainter, s: float, *, top: QColor, bottom: QColor,
+               border: QColor) -> QRectF:
+    rect = QRectF(s * 0.06, s * 0.06, s * 0.88, s * 0.88)
+    p.setPen(QPen(border, max(1.0, s * 0.045)))
+    p.setBrush(_vgrad(rect, top, bottom))
+    p.drawEllipse(rect)
+    # 顶部高光
+    gloss = QRectF(rect.left() + rect.width() * 0.16, rect.top() + rect.height() * 0.10,
+                   rect.width() * 0.68, rect.height() * 0.36)
+    p.setPen(Qt.NoPen)
+    p.setBrush(QColor(255, 255, 255, 130))
+    p.drawEllipse(gloss)
+    return rect
+
+
+def _aero_arrow(p: QPainter, s: float, direction: int) -> None:
+    _aero_ball(p, s, top=QColor("#EAF4FF"), bottom=QColor("#9CC4EA"),
+               border=QColor("#4A7EB5"))
+    poly = _arrow_polygon(s, direction)
+    p.setPen(Qt.NoPen)
+    p.setBrush(QColor("#1B4F86"))
+    p.drawPolygon(poly)
+
+
+def _draw_back_aero(p: QPainter, s: float) -> None:
+    _aero_arrow(p, s, -1)
+
+
+def _draw_forward_aero(p: QPainter, s: float) -> None:
+    _aero_arrow(p, s, 1)
+
+
+def _draw_stop_aero(p: QPainter, s: float) -> None:
+    _aero_ball(p, s, top=QColor("#FFD9D4"), bottom=QColor("#E2796C"),
+               border=QColor("#9C3226"))
+    _stroke(p, QColor("#FFFFFF"), max(1.4, s * 0.13))
+    inset = s * 0.30
+    p.drawLine(QPointF(inset, inset), QPointF(s - inset, s - inset))
+    p.drawLine(QPointF(inset, s - inset), QPointF(s - inset, inset))
+
+
+def _draw_refresh_aero(p: QPainter, s: float) -> None:
+    _aero_ball(p, s, top=QColor("#E8F7DC"), bottom=QColor("#94CC77"),
+               border=QColor("#3F7A2C"))
+    _stroke(p, QColor("#2F6B21"), max(1.3, s * 0.11))
+    rect = QRectF(s * 0.24, s * 0.24, s * 0.52, s * 0.52)
+    p.drawArc(rect, 60 * 16, 250 * 16)
+    # 箭头
+    p.setBrush(QColor("#2F6B21"))
+    p.setPen(Qt.NoPen)
+    tip = QPointF(s * 0.76, s * 0.30)
+    p.drawPolygon(QPolygonF([tip,
+                             QPointF(tip.x() - s * 0.17, tip.y() - s * 0.03),
+                             QPointF(tip.x() - s * 0.03, tip.y() + s * 0.15)]))
+
+
+def _draw_home_aero(p: QPainter, s: float) -> None:
+    _stroke(p, QColor("#3B5C7E"), max(1.1, s * 0.07))
+    roof = QPolygonF([QPointF(s * 0.10, s * 0.48), QPointF(s * 0.50, s * 0.13),
+                      QPointF(s * 0.90, s * 0.48)])
+    p.setBrush(_vgrad(QRectF(s * 0.10, s * 0.13, s * 0.80, s * 0.35),
+                      QColor("#EAF4FF"), QColor("#9CC4EA")))
+    p.drawPolygon(roof)
+    body = QRectF(s * 0.20, s * 0.46, s * 0.60, s * 0.40)
+    p.setBrush(_vgrad(body, QColor("#FFF6DC"), QColor("#E7C98A")))
+    p.drawRect(body)
+    p.setBrush(QColor("#7A5A28"))
+    p.setPen(Qt.NoPen)
+    p.drawRect(QRectF(s * 0.42, s * 0.62, s * 0.16, s * 0.24))
+
+
+# -- Win8.1 / IE11：细圆环 + 扁平箭头 --------------------------------------- #
+def _ring(p: QPainter, s: float, color: QColor, width_factor: float = 0.075) -> None:
+    _stroke(p, color, max(1.0, s * width_factor))
+    p.drawEllipse(QRectF(s * 0.08, s * 0.08, s * 0.84, s * 0.84))
+
+
+def _flat_arrow(p: QPainter, s: float, direction: int, color: QColor) -> None:
+    _chevron(p, s, s * 0.50, s * 0.50, s * 0.20, max(1.4, s * 0.12), direction, color)
+
+
+def _draw_back_flat(p: QPainter, s: float) -> None:
+    color = QColor("#2B2B2B")
+    _ring(p, s, color)
+    _flat_arrow(p, s, -1, color)
+
+
+def _draw_forward_flat(p: QPainter, s: float) -> None:
+    color = QColor("#2B2B2B")
+    _ring(p, s, color)
+    _flat_arrow(p, s, 1, color)
+
+
+def _draw_stop_flat(p: QPainter, s: float) -> None:
+    color = QColor("#C6362B")
+    _ring(p, s, color)
+    _stroke(p, color, max(1.4, s * 0.12))
+    inset = s * 0.33
+    p.drawLine(QPointF(inset, inset), QPointF(s - inset, s - inset))
+    p.drawLine(QPointF(inset, s - inset), QPointF(s - inset, inset))
+
+
+def _draw_refresh_flat(p: QPainter, s: float) -> None:
+    color = QColor("#2B2B2B")
+    _stroke(p, color, max(1.3, s * 0.10))
+    p.drawArc(QRectF(s * 0.14, s * 0.14, s * 0.72, s * 0.72), 40 * 16, 265 * 16)
+    p.setBrush(color)
+    p.setPen(Qt.NoPen)
+    tip = QPointF(s * 0.80, s * 0.36)
+    p.drawPolygon(QPolygonF([tip,
+                             QPointF(tip.x() - s * 0.20, tip.y() - s * 0.02),
+                             QPointF(tip.x() - s * 0.02, tip.y() + s * 0.19)]))
+
+
+def _draw_home_flat(p: QPainter, s: float) -> None:
+    color = QColor("#2B2B2B")
+    _stroke(p, color, max(1.2, s * 0.085))
+    path = QPainterPath()
+    path.moveTo(s * 0.12, s * 0.46)
+    path.lineTo(s * 0.50, s * 0.14)
+    path.lineTo(s * 0.88, s * 0.46)
+    p.drawPath(path)
+    p.setBrush(Qt.NoBrush)
+    p.drawRect(QRectF(s * 0.22, s * 0.46, s * 0.56, s * 0.38))
+    p.drawRect(QRectF(s * 0.42, s * 0.62, s * 0.16, s * 0.22))
+
+
+# -- Win10 / Edge：Fluent 细线（无外框） ------------------------------------ #
+def _modern_color() -> QColor:
+    return QColor("#3B3B3B")
+
+
+def _draw_back_modern(p: QPainter, s: float) -> None:
+    _chevron(p, s, s * 0.48, s * 0.50, s * 0.22, max(1.4, s * 0.095), -1, _modern_color())
+
+
+def _draw_forward_modern(p: QPainter, s: float) -> None:
+    _chevron(p, s, s * 0.52, s * 0.50, s * 0.22, max(1.4, s * 0.095), 1, _modern_color())
+
+
+def _draw_stop_modern(p: QPainter, s: float) -> None:
+    _stroke(p, QColor("#C6362B"), max(1.4, s * 0.10))
+    p.drawLine(QPointF(s * 0.28, s * 0.28), QPointF(s * 0.72, s * 0.72))
+    p.drawLine(QPointF(s * 0.28, s * 0.72), QPointF(s * 0.72, s * 0.28))
+
+
+def _draw_refresh_modern(p: QPainter, s: float) -> None:
+    color = _modern_color()
+    _stroke(p, color, max(1.3, s * 0.09))
+    p.drawArc(QRectF(s * 0.16, s * 0.16, s * 0.68, s * 0.68), 60 * 16, 250 * 16)
+    p.setBrush(color)
+    p.setPen(Qt.NoPen)
+    tip = QPointF(s * 0.78, s * 0.34)
+    p.drawPolygon(QPolygonF([tip,
+                             QPointF(tip.x() - s * 0.19, tip.y() - s * 0.02),
+                             QPointF(tip.x() - s * 0.02, tip.y() + s * 0.18)]))
+
+
+def _draw_home_modern(p: QPainter, s: float) -> None:
+    color = _modern_color()
+    _stroke(p, color, max(1.2, s * 0.085))
+    path = QPainterPath()
+    path.moveTo(s * 0.14, s * 0.47)
+    path.lineTo(s * 0.50, s * 0.16)
+    path.lineTo(s * 0.86, s * 0.47)
+    p.drawPath(path)
+    p.setBrush(Qt.NoBrush)
+    path2 = QPainterPath()
+    path2.moveTo(s * 0.24, s * 0.44)
+    path2.lineTo(s * 0.24, s * 0.84)
+    path2.lineTo(s * 0.76, s * 0.84)
+    path2.lineTo(s * 0.76, s * 0.44)
+    p.drawPath(path2)
+
+
+# -- 鸿蒙：粗圆头线条 + 蓝色强调 -------------------------------------------- #
+def _harmony_color() -> QColor:
+    return QColor("#007DFF")
+
+
+def _draw_back_harmony(p: QPainter, s: float) -> None:
+    _chevron(p, s, s * 0.46, s * 0.50, s * 0.20, max(1.8, s * 0.135), -1, _harmony_color())
+
+
+def _draw_forward_harmony(p: QPainter, s: float) -> None:
+    _chevron(p, s, s * 0.54, s * 0.50, s * 0.20, max(1.8, s * 0.135), 1, _harmony_color())
+
+
+def _draw_stop_harmony(p: QPainter, s: float) -> None:
+    _stroke(p, QColor("#E84026"), max(1.8, s * 0.13))
+    p.drawLine(QPointF(s * 0.30, s * 0.30), QPointF(s * 0.70, s * 0.70))
+    p.drawLine(QPointF(s * 0.30, s * 0.70), QPointF(s * 0.70, s * 0.30))
+
+
+def _draw_refresh_harmony(p: QPainter, s: float) -> None:
+    color = _harmony_color()
+    _stroke(p, color, max(1.7, s * 0.125))
+    p.drawArc(QRectF(s * 0.18, s * 0.18, s * 0.64, s * 0.64), 70 * 16, 240 * 16)
+    p.setBrush(color)
+    p.setPen(Qt.NoPen)
+    tip = QPointF(s * 0.76, s * 0.33)
+    p.drawPolygon(QPolygonF([tip,
+                             QPointF(tip.x() - s * 0.20, tip.y() - s * 0.01),
+                             QPointF(tip.x() - s * 0.01, tip.y() + s * 0.19)]))
+
+
+def _draw_home_harmony(p: QPainter, s: float) -> None:
+    color = _harmony_color()
+    _stroke(p, color, max(1.6, s * 0.115))
+    path = QPainterPath()
+    path.moveTo(s * 0.14, s * 0.47)
+    path.lineTo(s * 0.50, s * 0.17)
+    path.lineTo(s * 0.86, s * 0.47)
+    p.drawPath(path)
+    p.setBrush(Qt.NoBrush)
+    p.drawRect(QRectF(s * 0.24, s * 0.46, s * 0.52, s * 0.38))
+
+
+# -- 哈基米（Win11 风格 + 猫爪）：功能可辨识 + 猫爪元素 --------------------- #
+def _draw_back_paw(p: QPainter, s: float) -> None:
+    """后退：左向箭头，箭头尾部是一枚猫爪（三趾，靠后摆放不挡箭头）。"""
+    color = CAT_PAW_DARK
+    _chevron(p, s, s * 0.60, s * 0.50, s * 0.19, max(1.8, s * 0.125), -1, color)
+    _paw_pad(p, s * 0.25, s * 0.52, s * 0.145, CAT_PAW, toes=3)
+
+
+def _draw_forward_paw(p: QPainter, s: float) -> None:
+    """前进：右向箭头，箭头尾部是一枚猫爪（三趾）。"""
+    color = CAT_PAW_DARK
+    _chevron(p, s, s * 0.40, s * 0.50, s * 0.19, max(1.8, s * 0.125), 1, color)
+    _paw_pad(p, s * 0.75, s * 0.52, s * 0.145, CAT_PAW, toes=3)
+
+
+def _draw_stop_paw(p: QPainter, s: float) -> None:
+    """停止：猫爪掌心托住一个叉号（叉号依旧醒目）。"""
+    _paw_pad(p, s * 0.50, s * 0.62, s * 0.26, CAT_PAW_LIGHT, toes=3, opacity=220)
+    _stroke(p, QColor("#B3352A"), max(1.8, s * 0.13))
+    p.drawLine(QPointF(s * 0.32, s * 0.28), QPointF(s * 0.68, s * 0.64))
+    p.drawLine(QPointF(s * 0.68, s * 0.28), QPointF(s * 0.32, s * 0.64))
+
+
+def _draw_refresh_paw(p: QPainter, s: float) -> None:
+    """刷新：环形箭头，圆心是一枚猫爪。"""
+    color = CAT_PAW_DARK
+    _stroke(p, color, max(1.7, s * 0.115))
+    p.drawArc(QRectF(s * 0.14, s * 0.14, s * 0.72, s * 0.72), 70 * 16, 250 * 16)
+    p.setBrush(color)
+    p.setPen(Qt.NoPen)
+    tip = QPointF(s * 0.80, s * 0.34)
+    p.drawPolygon(QPolygonF([tip,
+                             QPointF(tip.x() - s * 0.20, tip.y() - s * 0.01),
+                             QPointF(tip.x() - s * 0.01, tip.y() + s * 0.19)]))
+    _paw_pad(p, s * 0.50, s * 0.56, s * 0.15, CAT_PAW, toes=2)
+
+
+def _draw_home_paw(p: QPainter, s: float) -> None:
+    """主页：小屋 + 屋顶上的猫脚印。"""
+    color = CAT_PAW_DARK
+    _stroke(p, color, max(1.6, s * 0.105))
+    roof = QPainterPath()
+    roof.moveTo(s * 0.10, s * 0.48)
+    roof.lineTo(s * 0.50, s * 0.16)
+    roof.lineTo(s * 0.90, s * 0.48)
+    p.drawPath(roof)
+    p.setBrush(Qt.NoBrush)
+    p.drawRect(QRectF(s * 0.22, s * 0.46, s * 0.56, s * 0.38))
+    p.drawRect(QRectF(s * 0.42, s * 0.62, s * 0.16, s * 0.22))
+    _paw_pad(p, s * 0.50, s * 0.34, s * 0.10, CAT_PAW, toes=3, opacity=235)
+
+
+# --------------------------------------------------------------------------- #
+# 其余工具按钮的线描图标（按系统风格着色）
+# --------------------------------------------------------------------------- #
+# 导航按钮之外的工具栏图标（转到/收藏/收藏夹/下载/历史/无痕/设置）也应当跟随
+# 系统风格：Win10、鸿蒙、哈基米用细线描风格，Win7 用深蓝，Win8.1 用近黑；
+# 哈基米（猫主题）在这些图标的中心再点一枚猫爪，兼顾"表意"与猫爪元素。
+def _style_accent(style: str) -> QColor:
+    return {
+        "aero": QColor("#1B4F86"),
+        "flat": QColor("#2B2B2B"),
+        "modern": QColor("#3B3B3B"),
+        "harmony": QColor("#007DFF"),
+        "fluent": CAT_PAW_DARK,
+    }.get(style, QColor("#000000"))
+
+
+def _line_weight(s: float) -> float:
+    return max(1.2, s * 0.085)
+
+
+def _line_go(p: QPainter, s: float, color: QColor, paw: bool) -> None:
+    _stroke(p, color, _line_weight(s))
+    path = QPainterPath()
+    path.moveTo(s * 0.14, s * 0.32)
+    path.lineTo(s * 0.62, s * 0.32)
+    path.lineTo(s * 0.62, s * 0.18)
+    path.lineTo(s * 0.88, s * 0.50)
+    path.lineTo(s * 0.62, s * 0.82)
+    path.lineTo(s * 0.62, s * 0.68)
+    path.lineTo(s * 0.14, s * 0.68)
+    path.closeSubpath()
+    p.drawPath(path)
+    if paw:
+        _paw_pad(p, s * 0.38, s * 0.50, s * 0.10, CAT_PAW, toes=2, opacity=235)
+
+
+def _line_star_add(p: QPainter, s: float, color: QColor, paw: bool) -> None:
+    _stroke(p, color, _line_weight(s))
+    p.drawPolygon(_star_polygon(s * 0.56, s * 0.42, s * 0.38, s * 0.16))
+    _stroke(p, color, _line_weight(s) * 1.15)
+    p.drawLine(QPointF(s * 0.16, s * 0.74), QPointF(s * 0.36, s * 0.74))
+    p.drawLine(QPointF(s * 0.26, s * 0.64), QPointF(s * 0.26, s * 0.84))
+    if paw:
+        _paw_pad(p, s * 0.72, s * 0.78, s * 0.095, CAT_PAW, toes=2, opacity=235)
+
+
+def _line_bookmarks(p: QPainter, s: float, color: QColor, paw: bool) -> None:
+    _stroke(p, color, _line_weight(s))
+    for offset in (0.0, 0.14):
+        path = QPainterPath()
+        left = s * (0.20 + offset)
+        path.moveTo(left, s * 0.20)
+        path.lineTo(s * (0.62 + offset), s * 0.20)
+        path.lineTo(s * (0.62 + offset), s * 0.76)
+        path.lineTo(s * (0.41 + offset), s * 0.60)
+        path.lineTo(left, s * 0.76)
+        path.closeSubpath()
+        p.drawPath(path)
+    if paw:
+        _paw_pad(p, s * 0.34, s * 0.42, s * 0.085, CAT_PAW, toes=2, opacity=230)
+
+
+def _line_download(p: QPainter, s: float, color: QColor, paw: bool) -> None:
+    _stroke(p, color, _line_weight(s))
+    p.drawLine(QPointF(s * 0.50, s * 0.14), QPointF(s * 0.50, s * 0.56))
+    _stroke(p, color, _line_weight(s) * 1.1)
+    path = QPainterPath()
+    path.moveTo(s * 0.30, s * 0.42)
+    path.lineTo(s * 0.50, s * 0.62)
+    path.lineTo(s * 0.70, s * 0.42)
+    p.drawPath(path)
+    _stroke(p, color, _line_weight(s))
+    p.drawLine(QPointF(s * 0.18, s * 0.80), QPointF(s * 0.82, s * 0.80))
+    if paw:
+        _paw_pad(p, s * 0.50, s * 0.30, s * 0.095, CAT_PAW, toes=2, opacity=230)
+
+
+def _line_history(p: QPainter, s: float, color: QColor, paw: bool) -> None:
+    _stroke(p, color, _line_weight(s))
+    p.drawEllipse(QRectF(s * 0.16, s * 0.16, s * 0.68, s * 0.68))
+    p.drawLine(QPointF(s * 0.50, s * 0.32), QPointF(s * 0.50, s * 0.52))
+    p.drawLine(QPointF(s * 0.50, s * 0.52), QPointF(s * 0.66, s * 0.62))
+    if paw:
+        _paw_pad(p, s * 0.50, s * 0.50, s * 0.085, CAT_PAW, toes=2, opacity=170)
+
+
+def _line_incognito(p: QPainter, s: float, color: QColor, paw: bool) -> None:
+    _stroke(p, color, _line_weight(s))
+    # 帽檐 + 帽顶（经典"无痕"造型）
+    p.drawLine(QPointF(s * 0.08, s * 0.46), QPointF(s * 0.92, s * 0.46))
+    path = QPainterPath()
+    path.moveTo(s * 0.22, s * 0.44)
+    path.lineTo(s * 0.34, s * 0.22)
+    path.lineTo(s * 0.66, s * 0.22)
+    path.lineTo(s * 0.78, s * 0.44)
+    p.drawPath(path)
+    p.drawEllipse(QRectF(s * 0.24, s * 0.58, s * 0.18, s * 0.14))
+    p.drawEllipse(QRectF(s * 0.58, s * 0.58, s * 0.18, s * 0.14))
+    if paw:
+        _paw_pad(p, s * 0.50, s * 0.33, s * 0.085, CAT_PAW, toes=2, opacity=230)
+
+
+def _line_settings(p: QPainter, s: float, color: QColor, paw: bool) -> None:
+    _stroke(p, color, _line_weight(s))
+    p.drawEllipse(QRectF(s * 0.20, s * 0.20, s * 0.60, s * 0.60))
+    p.drawEllipse(QRectF(s * 0.40, s * 0.40, s * 0.20, s * 0.20))
+    # 六个齿
+    for index in range(6):
+        angle = index * math.pi / 3
+        cx, cy = s * 0.50, s * 0.50
+        x1 = cx + math.cos(angle) * s * 0.30
+        y1 = cy + math.sin(angle) * s * 0.30
+        x2 = cx + math.cos(angle) * s * 0.44
+        y2 = cy + math.sin(angle) * s * 0.44
+        p.drawLine(QPointF(x1, y1), QPointF(x2, y2))
+    if paw:
+        _paw_pad(p, s * 0.50, s * 0.50, s * 0.085, CAT_PAW, toes=2, opacity=170)
+
+
+def _line_find(p: QPainter, s: float, color: QColor, paw: bool) -> None:
+    _stroke(p, color, _line_weight(s))
+    p.drawEllipse(QRectF(s * 0.16, s * 0.16, s * 0.52, s * 0.52))
+    p.drawLine(QPointF(s * 0.62, s * 0.62), QPointF(s * 0.86, s * 0.86))
+    if paw:
+        _paw_pad(p, s * 0.42, s * 0.42, s * 0.08, CAT_PAW, toes=2, opacity=170)
+
+
+def _line_star(p: QPainter, s: float, color: QColor, paw: bool) -> None:
+    _stroke(p, color, _line_weight(s))
+    p.drawPolygon(_star_polygon(s * 0.50, s * 0.52, s * 0.40, s * 0.17))
+    if paw:
+        _paw_pad(p, s * 0.50, s * 0.54, s * 0.075, CAT_PAW, toes=2, opacity=170)
+
+
+#: 走线描风格的工具栏图标（导航图标另有分风格实现）
+_LINE_DRAWERS = {
+    "go": _line_go,
+    "star_add": _line_star_add,
+    "bookmarks": _line_bookmarks,
+    "download": _line_download,
+    "history": _line_history,
+    "incognito": _line_incognito,
+    "settings": _line_settings,
+    "find": _line_find,
+    "star": _line_star,
+}
+
+#: 需要用线描版本替换的主题风格（XP/98 保持彩色经典图标）
+LINE_STYLES = ("aero", "flat", "modern", "harmony", "fluent")
+
+
+#: 分风格图标：style -> name -> drawer
+_STYLED_DRAWERS: dict[str, dict[str, object]] = {
+    "aero": {
+        "back": _draw_back_aero, "forward": _draw_forward_aero,
+        "stop": _draw_stop_aero, "refresh": _draw_refresh_aero, "home": _draw_home_aero,
+    },
+    "flat": {
+        "back": _draw_back_flat, "forward": _draw_forward_flat,
+        "stop": _draw_stop_flat, "refresh": _draw_refresh_flat, "home": _draw_home_flat,
+    },
+    "modern": {
+        "back": _draw_back_modern, "forward": _draw_forward_modern,
+        "stop": _draw_stop_modern, "refresh": _draw_refresh_modern,
+        "home": _draw_home_modern,
+    },
+    "harmony": {
+        "back": _draw_back_harmony, "forward": _draw_forward_harmony,
+        "stop": _draw_stop_harmony, "refresh": _draw_refresh_harmony,
+        "home": _draw_home_harmony,
+    },
+    "fluent": {
+        "back": _draw_back_paw, "forward": _draw_forward_paw,
+        "stop": _draw_stop_paw, "refresh": _draw_refresh_paw, "home": _draw_home_paw,
+    },
+}
+
+#: 这些图标会随主题风格变化（其余图标保持统一，避免界面花花绿绿）
+NAV_ICONS = ("back", "forward", "stop", "refresh", "home")
 
 
 _DRAWERS = {

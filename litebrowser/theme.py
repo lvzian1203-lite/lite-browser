@@ -81,6 +81,22 @@ class ThemeSpec:
     hot_bottom: str = "#FFE39B"
     hot_border: str = "#B6BDD2"
 
+    # 导航按钮（后退 / 前进 / 停止 / 刷新 / 主页）
+    # 每个主题按自己系统的真实浏览器做法来决定"布局 + 图标风格"：
+    #   classic —— 图标 + 文字（IE6/XP 时代）
+    #   aero    —— 图标按钮带玻璃高光，后退/前进合并成一组（IE8/7）
+    #   flat    —— 无圆角、纯箭头，悬停方框（IE11/8.1）
+    #   modern  —— Fluent 细线箭头、较大图标（Edge/10）
+    #   harmony —— 粗线条 + 圆形悬停底（鸿蒙）
+    #   fluent  —— Win11 圆角胶囊悬停；图标为"猫爪 + 功能"组合（哈基米）
+    nav_style: str = "classic"
+    nav_icon_size: int = 22
+    nav_show_text: bool = True      # 图标旁是否显示文字
+    nav_radius: int = 3             # 导航按钮圆角
+    nav_group: str = "plain"        # plain | split（后退/前进连成一体）| circle（圆形悬停）
+    nav_height: int = 0             # 0 = 由样式表自动决定
+    nav_hover_alpha: int = 0        # >0 时用半透明悬停底色（Win11 风格）
+
     # 普通按钮
     button_top: str = "#FFFFFF"
     button_mid: str = "#F4F2EC"
@@ -116,6 +132,9 @@ class ThemeSpec:
 XP = ThemeSpec(
     id="xp",
     name="Windows XP (Luna)",
+    nav_style="classic", nav_icon_size=22,
+    nav_show_text=True, nav_radius=3, nav_group="plain",
+    nav_height=0, nav_hover_alpha=0,
     caption_top="#4C9BF7", caption_mid="#0B5FE6", caption_bottom="#0A46B8",
     face="#ECE9D8", face_alt="#F5F3EA", border="#0831A0", rounded=8,
     text_dim="#4A4A4A", text_disabled="#8A8A8A",
@@ -124,6 +143,9 @@ XP = ThemeSpec(
 WIN98 = ThemeSpec(
     id="win98",
     name="Windows 98 / 2000 经典",
+    nav_style="classic", nav_icon_size=22,
+    nav_show_text=True, nav_radius=0, nav_group="plain",
+    nav_height=0, nav_hover_alpha=0,
     caption_style="classic",
     caption_top="#000080", caption_mid="#000080", caption_bottom="#1084D0",
     caption_inactive_top="#808080", caption_inactive_bottom="#808080",
@@ -147,6 +169,9 @@ WIN98 = ThemeSpec(
 WIN7 = ThemeSpec(
     id="win7",
     name="Windows 7 (Aero)",
+    nav_style="aero", nav_icon_size=24,
+    nav_show_text=False, nav_radius=4, nav_group="split",
+    nav_height=0, nav_hover_alpha=0,
     caption_top="#DCEBFB", caption_mid="#B6D3F0", caption_bottom="#8CB4DE",
     caption_text="#0A2A4A",
     caption_inactive_top="#F2F2F2", caption_inactive_bottom="#DCDCDC",
@@ -170,6 +195,9 @@ WIN7 = ThemeSpec(
 WIN81 = ThemeSpec(
     id="win81",
     name="Windows 8.1",
+    nav_style="flat", nav_icon_size=22,
+    nav_show_text=False, nav_radius=0, nav_group="plain",
+    nav_height=0, nav_hover_alpha=0,
     caption_style="flat",
     caption_top="#2B579A", caption_mid="#2B579A", caption_bottom="#1F4278",
     caption_inactive_top="#C8C8C8", caption_inactive_bottom="#B4B4B4",
@@ -193,6 +221,9 @@ WIN81 = ThemeSpec(
 WIN10 = ThemeSpec(
     id="win10",
     name="Windows 10",
+    nav_style="modern", nav_icon_size=24,
+    nav_show_text=False, nav_radius=3, nav_group="plain",
+    nav_height=0, nav_hover_alpha=0,
     caption_style="flat",
     caption_top="#F3F3F3", caption_mid="#F3F3F3", caption_bottom="#F3F3F3",
     caption_text="#1A1A1A",
@@ -215,34 +246,12 @@ WIN10 = ThemeSpec(
     scroll_thumb_border="#B8B8B8",
 )
 
-WIN11 = ThemeSpec(
-    id="win11",
-    name="Windows 11（Mica 圆角）",
-    caption_style="flat",
-    caption_top="#F3F3F3", caption_mid="#F3F3F3", caption_bottom="#F3F3F3",
-    caption_text="#1A1A1A",
-    caption_inactive_top="#FAFAFA", caption_inactive_bottom="#FAFAFA",
-    caption_inactive_text="#8A8A8A", caption_highlight=False,
-    caption_line="#0067C0",
-    face="#F3F3F3", face_alt="#FAFAFA", border="#DCDCDC", rounded=9,
-    text="#1A1A1A", text_disabled="#8F8F8F", text_dim="#4D4D4D",
-    field_bg="#FFFFFF", field_border="#C9C9C9", highlight="#0067C0",
-    menu_bg="#F9F9F9", menu_border="#DCDCDC",
-    hot_top="#EEF4FB", hot_bottom="#DCE9F8", hot_border="#B4CCE6",
-    button_top="#FDFDFD", button_mid="#F6F6F6", button_bottom="#EDEDED",
-    button_border="#C9C9C9", button_hover_top="#F3F8FE", button_hover_bottom="#E2EDFA",
-    button_pressed="#DCE7F5", button_disabled_bg="#F6F6F6",
-    button_disabled_border="#DCDCDC", button_flat=True,
-    tab_bg_top="#FAFAFA", tab_bg_bottom="#EDEDED", tab_selected_bg="#FFFFFF",
-    tab_border="#DCDCDC", statusbar_bg="#F3F3F3",
-    progress_top="#CFE9C0", progress_mid="#8ED162", progress_bottom="#5AAE3E",
-    scroll_bg="#F3F3F3", scroll_thumb_top="#FDFDFD", scroll_thumb_bottom="#C6C6C6",
-    scroll_thumb_border="#B8B8B8",
-)
-
 HARMONY = ThemeSpec(
     id="harmony",
     name="HarmonyOS（鸿蒙）",
+    nav_style="harmony", nav_icon_size=24,
+    nav_show_text=False, nav_radius=13, nav_group="circle",
+    nav_height=30, nav_hover_alpha=0,
     caption_style="flat",
     caption_top="#FFFFFF", caption_mid="#FFFFFF", caption_bottom="#FAFAFC",
     caption_text="#182431",
@@ -268,6 +277,9 @@ HARMONY = ThemeSpec(
 CAT = ThemeSpec(
     id="cat",
     name="哈基米（猫猫）",
+    nav_style="fluent", nav_icon_size=26,
+    nav_show_text=False, nav_radius=9, nav_group="split",
+    nav_height=32, nav_hover_alpha=22,
     caption_style="gradient",
     caption_top="#FFE3B8", caption_mid="#FFC97A", caption_bottom="#F5A94E",
     caption_text="#5A3410",
@@ -293,12 +305,13 @@ CAT = ThemeSpec(
 
 THEMES: dict[str, ThemeSpec] = {
     item.id: item
-    for item in (XP, WIN98, WIN7, WIN81, WIN10, WIN11, HARMONY, CAT)
+    for item in (XP, WIN98, WIN7, WIN81, WIN10, HARMONY, CAT)
 }
-THEME_ORDER = ["xp", "win98", "win7", "win81", "win10", "win11", "harmony", "cat"]
+THEME_ORDER = ["xp", "win98", "win7", "win81", "win10", "harmony", "cat"]
 DEFAULT_THEME = "xp"
-#: 已移除的主题 → 回退目标（旧配置里的 mac 会自动换成 xp，避免升级后变成未知主题）
-REMOVED_THEMES = {"mac": DEFAULT_THEME}
+#: 已移除的主题 → 回退目标（旧配置里的 mac 自动换成 xp、win11 换成 cat，
+#: 避免升级后变成未知主题；哈基米 UI 现在承载 Win11 风格）
+REMOVED_THEMES = {"mac": DEFAULT_THEME, "win11": "cat"}
 
 
 # --------------------------------------------------------------------------- #
@@ -463,7 +476,8 @@ def apply_theme(app, spec: ThemeSpec) -> None:
 def spec_for(theme_id: str, mode: str = "light", accent: str = "") -> ThemeSpec:
     """根据设置生成最终主题描述。
 
-    :param theme_id: xp / win98 / win7 / win81 / win10 / win11 / harmony / cat
+    :param theme_id: xp / win98 / win7 / win81 / win10 / harmony / cat
+        （已移除的 mac 回退到 xp、win11 回退到 cat）
     :param mode: light | dark
     :param accent: 自定义边框颜色（#RRGGBB），空字符串表示使用主题默认
     """
@@ -535,10 +549,167 @@ def _grad_h(*colors: str) -> str:
     return "qlineargradient(x1:0, y1:0, x2:1, y2:0, " + ", ".join(stops) + ")"
 
 
+def nav_qss(t: "ThemeSpec") -> str:
+    """导航按钮（后退/前进/停止/刷新/主页）的样式：按各系统的真实做法区分。
+
+    These buttons are tagged ``objectName="navButton"`` in the toolbar
+    (win7 / 哈基米 additionally wrap 后退/前进 in ``navGroup``), so this block
+    only affects the navigation area and leaves other tool buttons alone.
+    """
+    from PySide6.QtGui import QColor  # 与本文件其它地方一致：延后导入 QtGui
+
+    radius = t.nav_radius
+    height = t.nav_height or 0
+    height_rule = f"min-height: {height}px; max-height: {height}px;" if height else ""
+    style = t.nav_style
+
+    if style == "aero":
+        # Win7：玻璃质感，悬停是淡蓝渐变 + 细边框，按下更深
+        return f"""
+QToolButton#navButton {{
+    padding: 1px 5px; margin: 0px; border: 1px solid transparent;
+    border-radius: {radius}px; {height_rule}
+}}
+QToolButton#navButton:hover {{
+    border: 1px solid #8FB6DC;
+    background: {_grad("#F4FAFF", "#D6E8F8")};
+}}
+QToolButton#navButton:pressed {{
+    border: 1px solid #6E9BC6;
+    background: {_grad("#CFE2F5", "#B7D3EE")};
+}}
+QToolButton#navButton:disabled {{ color: {t.text_disabled}; }}
+QToolButton#navButton:checked {{
+    border: 1px solid #8FB6DC; background: {_grad("#E6F1FC", "#CFE3F6")};
+}}
+/* Win7 的 IE8 把"后退/前进"做成一颗左右相连的按钮 */
+QToolButton#navButton[navPos="first"] {{
+    border-top-right-radius: 0px; border-bottom-right-radius: 0px;
+    border-right: 0px; margin-right: 0px;
+}}
+QToolButton#navButton[navPos="last"] {{
+    border-top-left-radius: 0px; border-bottom-left-radius: 0px;
+    border-left: 1px solid #A8C4DE; margin-left: 0px;
+}}
+QToolButton#navButton[navPos="first"]:hover,
+QToolButton#navButton[navPos="last"]:hover {{
+    border: 1px solid #8FB6DC; background: {_grad("#F4FAFF", "#D6E8F8")};
+}}
+QToolButton#navButton[navPos="first"]:pressed,
+QToolButton#navButton[navPos="last"]:pressed {{
+    border: 1px solid #6E9BC6; background: {_grad("#CFE2F5", "#B7D3EE")};
+}}
+"""
+
+    if style == "flat":
+        # Win8.1 / IE11：无圆角，悬停是浅灰方块
+        return f"""
+QToolButton#navButton {{
+    padding: 2px 6px; margin: 0px; border: 1px solid transparent;
+    border-radius: 0px; {height_rule}
+}}
+QToolButton#navButton:hover {{ background: #E6E6E6; border: 1px solid #D0D0D0; }}
+QToolButton#navButton:pressed {{ background: #D6D6D6; border: 1px solid #B8B8B8; }}
+QToolButton#navButton:checked {{ background: #DEDEDE; border: 1px solid #C4C4C4; }}
+QToolButton#navButton:disabled {{ color: {t.text_disabled}; }}
+"""
+
+    if style == "modern":
+        # Win10 / Edge：细边框浅灰悬停，图标更大
+        return f"""
+QToolButton#navButton {{
+    padding: 2px 7px; margin: 0px 1px; border: 1px solid transparent;
+    border-radius: {radius}px; {height_rule}
+}}
+QToolButton#navButton:hover {{ background: #EDEDED; border: 1px solid #E0E0E0; }}
+QToolButton#navButton:pressed {{ background: #DCDCDC; border: 1px solid #C8C8C8; }}
+QToolButton#navButton:checked {{ background: #E4E4E4; border: 1px solid #D4D4D4; }}
+QToolButton#navButton:disabled {{ color: {t.text_disabled}; }}
+"""
+
+    if style == "harmony":
+        # 鸿蒙：圆形悬停底 + 淡蓝高亮
+        return f"""
+QToolButton#navButton {{
+    padding: 1px 3px; margin: 0px 2px; border: 1px solid transparent;
+    border-radius: {radius}px; {height_rule}
+}}
+QToolButton#navButton:hover {{ background: #E8F1FF; border: 1px solid #C9DFFF; }}
+QToolButton#navButton:pressed {{ background: #D5E6FF; border: 1px solid #A8CBFF; }}
+QToolButton#navButton:checked {{ background: #E0EDFF; border: 1px solid #BBD6FF; }}
+QToolButton#navButton:disabled {{ color: {t.text_disabled}; }}
+"""
+
+    if style == "fluent":
+        # 哈基米（Win11 风格）：圆角胶囊 + 半透明暖色悬停；后退/前进合成一颗胶囊
+        alpha = t.nav_hover_alpha or 22
+        hover = QColor(t.highlight)
+        hover.setAlpha(alpha)
+        press = QColor(t.highlight)
+        press.setAlpha(min(255, alpha + 26))
+        return f"""
+QToolButton#navButton {{
+    padding: 1px 4px; margin: 0px 1px; border: 1px solid transparent;
+    border-radius: {radius}px; {height_rule}
+}}
+QToolButton#navButton:hover {{
+    background: rgba({hover.red()}, {hover.green()}, {hover.blue()}, {hover.alpha()});
+    border: 1px solid rgba(224, 168, 96, 110);
+}}
+QToolButton#navButton:pressed {{
+    background: rgba({press.red()}, {press.green()}, {press.blue()}, {press.alpha()});
+    border: 1px solid rgba(206, 150, 78, 140);
+}}
+QToolButton#navButton:checked {{
+    background: rgba({hover.red()}, {hover.green()}, {hover.blue()}, {hover.alpha() + 14});
+    border: 1px solid rgba(224, 168, 96, 130);
+}}
+QToolButton#navButton:disabled {{ color: {t.text_disabled}; }}
+/* 哈基米（Win11 风格）：后退/前进连成一颗暖色胶囊，与 Win11 的圆角一致 */
+QToolButton#navButton[navPos="first"] {{
+    border-top-right-radius: 0px; border-bottom-right-radius: 0px;
+    border-right: 0px; margin-right: 0px;
+}}
+QToolButton#navButton[navPos="last"] {{
+    border-top-left-radius: 0px; border-bottom-left-radius: 0px;
+    border-left: 1px solid rgba(224, 168, 96, 90); margin-left: 0px;
+}}
+QToolButton#navButton[navPos="first"]:hover,
+QToolButton#navButton[navPos="last"]:hover {{
+    border: 1px solid rgba(224, 168, 96, 110);
+    background: rgba({hover.red()}, {hover.green()}, {hover.blue()}, {hover.alpha()});
+}}
+QToolButton#navButton[navPos="first"]:pressed,
+QToolButton#navButton[navPos="last"]:pressed {{
+    border: 1px solid rgba(206, 150, 78, 140);
+    background: rgba({press.red()}, {press.green()}, {press.blue()}, {press.alpha()});
+}}
+"""
+
+    # classic（XP / 98）：图标 + 文字 + 经典热区
+    return f"""
+QToolButton#navButton {{
+    padding: 2px 6px; margin: 0px 1px; border: 1px solid transparent;
+    border-radius: {radius}px; {height_rule}
+}}
+QToolButton#navButton:hover {{
+    border: 1px solid {t.hot_border}; background: {_grad(t.hot_top, t.hot_bottom)};
+}}
+QToolButton#navButton:pressed {{
+    border: 1px solid {t.button_border}; background: {t.button_pressed};
+}}
+QToolButton#navButton:checked {{
+    border: 1px solid {t.hot_border}; background: {_grad(t.hot_top, t.hot_bottom)};
+}}
+QToolButton#navButton:disabled {{ color: {t.text_disabled}; }}
+"""
+
+
 def stylesheet(spec: Optional[ThemeSpec] = None) -> str:
     """按主题生成全局 QSS。"""
     t = spec or _current
     status = status_colors(t)
+    nav_style_qss = nav_qss(t)
     heading_color = "#003C74" if t.id in ("xp", "win98") else t.highlight
 
     button_qss = f"""
@@ -665,6 +836,9 @@ QToolButton:checked {{
 }}
 QToolButton:disabled {{ color: {t.text_disabled}; }}
 QToolButton::menu-indicator {{ image: none; }}
+
+/* ---------- 导航按钮（随系统风格变化）---------- */
+{nav_style_qss}
 
 /* ---------- 输入框 ---------- */
 QLineEdit, QPlainTextEdit, QTextEdit {{

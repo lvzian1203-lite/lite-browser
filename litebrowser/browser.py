@@ -142,15 +142,22 @@ class MainWindow(XPWindow):
         self.act_stop = QAction(icons.icon("stop", 22), "停止", self)
         self.act_refresh = QAction(icons.icon("refresh", 22), "刷新", self)
         self.act_home = QAction(icons.icon("home", 22), "主页", self)
-        for action in (
+        #: 导航按钮组：布局与图标随主题（各系统的真实做法）变化
+        self._nav_actions = (
             self.act_back,
             self.act_forward,
             self.act_stop,
             self.act_refresh,
             self.act_home,
+        )
+        for action, icon_name in zip(
+            self._nav_actions, ("back", "forward", "stop", "refresh", "home")
         ):
+            action.setProperty("iconName", icon_name)
             self.toolbar.addAction(action)
         self.toolbar.addSeparator()
+        # 首次套用当前主题的导航风格（图标 / 尺寸 / 文字 / 连体分组）
+        self.apply_nav_style(theme.current())
 
         self.address = QLineEdit(self.body)
         self.address.setMinimumWidth(220)
@@ -179,15 +186,18 @@ class MainWindow(XPWindow):
         self.act_incognito = QAction(icons.icon("incognito", 22), "无痕", self)
         self.act_incognito.setCheckable(True)
         self.act_settings = QAction(icons.icon("settings", 22), "设置", self)
-        for action in (
-            self.act_go,
-            self.act_star,
-            self.act_bookmarks,
-            self.act_download,
-            self.act_history,
-            self.act_incognito,
-            self.act_settings,
-        ):
+        #: 其余工具栏按钮：图标同样跟随系统风格（Win10/鸿蒙/哈基米改为线描）
+        self._tool_actions = (
+            (self.act_go, "go"),
+            (self.act_star, "star_add"),
+            (self.act_bookmarks, "bookmarks"),
+            (self.act_download, "download"),
+            (self.act_history, "history"),
+            (self.act_incognito, "incognito"),
+            (self.act_settings, "settings"),
+        )
+        for action, icon_name in self._tool_actions:
+            action.setProperty("iconName", icon_name)
             self.toolbar.addAction(action)
 
         self.bookmark_bar = QToolBar("书签栏", self.body)
@@ -1680,7 +1690,65 @@ class MainWindow(XPWindow):
             widget = self.tabs.widget(index)
             if widget is not None:
                 widget.update()
+        # 导航按钮的布局与图标随系统风格变化
+        self.apply_nav_style(theme.current())
         self._update_security_indicator()
+
+    def apply_nav_style(self, spec) -> None:
+        """按主题重排导航按钮：图标风格 / 尺寸 / 是否带文字 / 连体分组。
+
+        各系统的浏览器在这几颗按钮上的做法差别很大，这里尽量贴近真实：
+        XP/98 图标带文字，Win7 后退前进连成一体，8.1 无圆角，10 图标更大，
+        鸿蒙用圆形悬停底，哈基米（Win11 风格）用猫爪图标 + 胶囊悬停。
+        """
+        if not hasattr(self, "toolbar"):
+            return
+        style = str(getattr(spec, "nav_style", "") or "classic")
+        size = int(getattr(spec, "nav_icon_size", 22) or 22)
+        show_text = bool(getattr(spec, "nav_show_text", True))
+        group = str(getattr(spec, "nav_group", "plain") or "plain")
+
+        try:
+            icons.clear_cache()
+            self.toolbar.setIconSize(QSize(size, size))
+            self.toolbar.setToolButtonStyle(
+                Qt.ToolButtonTextBesideIcon if show_text else Qt.ToolButtonIconOnly
+            )
+            self.toolbar.setProperty("navStyle", style)
+            for action in self._nav_actions:
+                icon_name = str(action.property("iconName") or "globe")
+                action.setIcon(icons.icon(icon_name, size, style))
+                button = self.toolbar.widgetForAction(action)
+                if button is None:
+                    continue
+                button.setObjectName("navButton")
+                button.setProperty("navStyle", style)
+                # 后退/前进是否连体（Win7 的 IE、哈基米分别有自己的连体样式）
+                if action is self.act_back and group == "split":
+                    button.setProperty("navPos", "first")
+                elif action is self.act_forward and group == "split":
+                    button.setProperty("navPos", "last")
+                else:
+                    button.setProperty("navPos", "")
+                height = int(getattr(spec, "nav_height", 0) or 0)
+                if height:
+                    button.setFixedHeight(height)
+                    button.setMinimumWidth(height)
+                else:
+                    button.setMinimumHeight(0)
+                    button.setMaximumHeight(16777215)
+                    button.setMinimumWidth(0)
+                # 动态属性变化后必须重新 polish，样式表才会重新求值
+                button.style().unpolish(button)
+                button.style().polish(button)
+                button.update()
+            # 其余工具栏按钮的图标也跟随系统风格（线描 / 猫爪点缀）
+            tool_size = max(16, size - 2)
+            for action, icon_name in getattr(self, "_tool_actions", ()):
+                action.setIcon(icons.icon(icon_name, tool_size, style))
+            self.toolbar.setIconSize(QSize(size, size))
+        except Exception as exc:  # noqa: BLE001 - 外观失败不能影响浏览器可用性
+            log.warning("套用导航按钮样式失败：%s", exc)
 
     # ------------------------------------------------------------------ #
     # 启动耗时
