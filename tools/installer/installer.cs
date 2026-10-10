@@ -23,8 +23,8 @@ using Microsoft.Win32;
 [assembly: AssemblyCompany("lvzian")]
 [assembly: AssemblyCopyright("Copyright (C) 2026 lvzian")]
 [assembly: AssemblyDescription("lite browser 安装程序（Chromium 内核的仿 Windows XP 风格浏览器）")]
-[assembly: AssemblyVersion("1.7.1.0")]
-[assembly: AssemblyFileVersion("1.7.1.0")]
+[assembly: AssemblyVersion("1.7.2.0")]
+[assembly: AssemblyFileVersion("1.7.2.0")]
 
 namespace LiteBrowserSetup
 {
@@ -62,7 +62,7 @@ namespace LiteBrowserSetup
     static class Const
     {
         public const string AppName = "lite browser";
-        public const string Version = "1.7.1";
+        public const string Version = "1.7.2";
         public const string Publisher = "lvzian";
         public const string ExeName = "lite browser.exe";
         public const string UninstallName = "uninstall.exe";

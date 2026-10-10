@@ -30,7 +30,7 @@ DIST = ROOT / "dist" / "lite browser"
 TOOLS = ROOT / "tools" / "installer"
 ICON = ROOT / "assets" / "lite_browser.ico"
 APP_NAME = "lite browser"
-VERSION = "1.7.1"
+VERSION = "1.7.2"
 
 CSC_CANDIDATES = [
     Path(r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"),

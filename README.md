@@ -1,7 +1,12 @@
 # lite browser
 
+**语言 / Language**：[中文](#lite-browser) ｜ [English](#english)
+
+> 英文说明见下方 [English](#english) 一节。 English documentation is in the [English](#english) section below.
+
 一款使用 **Python** 编写的轻量浏览器，界面完整仿照 **Windows XP (Luna)** 风格，
-并内置 **Windows 98 / 7 / 8.1 / 10 / 11 / HarmonyOS / 哈基米** 七套可切换皮肤、深色模式与自定义边框颜色。
+并内置 **Windows 98 / 7 / 8.1 / 10 / HarmonyOS / 哈基米** 七套可切换皮肤、深色模式与自定义边框颜色。
+界面支持 **中文（简体）/ English 双语切换**。
 
 渲染引擎支持两种 Chromium 内核，可自动选择：
 
@@ -12,7 +17,7 @@
 还内置了 **Ruffle**（开源 Flash 运行时，无广告），Flash 小游戏网站可以直接游玩；
 以及**手动标记屏蔽网页广告**与**自动拦截弹窗**。
 
-> 作者：**lvzian**　版本：**1.7.1**　许可证：**MIT**
+> 作者：**lvzian**　版本：**1.7.2**　许可证：**MIT**　界面语言：**中文（简体）/ English**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-blue.svg)](#五使用方式)
@@ -28,13 +33,27 @@
 
 ### 界面风格
 
-| Windows 98 | Windows 11 | HarmonyOS（鸿蒙） |
-| --- | --- | --- |
-| ![Win98](docs/screenshot-theme-win98.png) | ![Win11](docs/screenshot-theme-win11.png) | ![鸿蒙](docs/screenshot-theme-harmony.png) |
+每套主题的**导航按钮布局与图标都按对应系统重做**：XP/98 为图标+文字，Win7 为连体 Aero 按钮，
+Win8.1 扁平无圆角，Win10 细线 Fluent，HarmonyOS 圆形悬停底，哈基米（Win11 风格）为胶囊悬停底
+且按钮图标全部带猫爪元素。
 
-| 哈基米（猫猫） | 深色模式 |
+| Windows XP (Luna) | Windows 98 | Windows 7 (Aero) |
+| --- | --- | --- |
+| ![WinXP](docs/screenshot-theme-xp.png) | ![Win98](docs/screenshot-theme-win98.png) | ![Win7](docs/screenshot-theme-win7.png) |
+
+| Windows 8.1 | Windows 10 | HarmonyOS（鸿蒙） |
+| --- | --- | --- |
+| ![Win81](docs/screenshot-theme-win81.png) | ![Win10](docs/screenshot-theme-win10.png) | ![鸿蒙](docs/screenshot-theme-harmony.png) |
+
+| 哈基米（Win11 风格 + 猫爪图标） | 深色模式 |
 | --- | --- |
 | ![哈基米](docs/screenshot-theme-cat.png) | ![深色](docs/screenshot-theme-dark.png) |
+
+### 中英双语界面
+
+| 英文主界面 | 英文设置 · 外观（含语言切换） |
+| --- | --- |
+| ![English UI](docs/screenshot-en-main.png) | ![English settings](docs/screenshot-en-appearance.png) |
 
 ### 主要面板与工具
 
@@ -42,7 +61,7 @@
 | --- | --- |
 | ![内核与环境](docs/screenshot-engine.png) | ![网络](docs/screenshot-network.png) |
 
-| 设置 · 常规 | 设置 · 外观（八套主题） |
+| 设置 · 常规 | 设置 · 外观（七套主题 + 语言切换） |
 | --- | --- |
 | ![设置常规](docs/screenshot-settings.png) | ![外观](docs/screenshot-appearance.png) |
 
@@ -100,7 +119,8 @@
 | **状态栏版本号** | 底边栏右侧常显当前版本（点击打开「关于」） |
 | **无痕浏览模式** | 设置 → 隐私与安全，或工具栏 / `Ctrl+Shift+N` 一键切换；开启后不写入历史记录，Cookie 与缓存仅存内存（WebView2 使用 InPrivate，QtWebEngine 使用内存 profile），状态栏显示红色“无痕浏览”标识 |
 | **数据加密** | 书签 / 历史记录 / 下载记录全部使用 **AES-256-GCM** 加密保存，主密钥由 Windows DPAPI 保护，也可设置口令（scrypt 派生）；附带 **明文导出工具**（菜单「工具 → 导出明文数据」或 `tools/decrypt_data.py`） |
-| **多套 UI 风格** | 无边框窗口 + 代码绘制的完整皮肤：**Windows XP (Luna) / 98 经典 / 7 (Aero) / 8.1 / 10 / 11（Mica 圆角） / HarmonyOS（鸿蒙） / 哈基米（猫猫）** 八种风格，支持**深色 / 浅色**模式（选择会被记住），并可**自定义边框颜色**（同时作用于标题栏与窗口边框）；切换立即生效，无需重启 |
+| **多套 UI 风格** | 无边框窗口 + 代码绘制的完整皮肤：**Windows XP (Luna) / 98 经典 / 7 (Aero) / 8.1 / 10 / HarmonyOS（鸿蒙） / 哈基米（猫猫，Win11 风格）** 七种风格，支持**深色 / 浅色**模式（选择会被记住），并可**自定义边框颜色**（同时作用于标题栏与窗口边框）；切换立即生效，无需重启。**每套主题的后退/前进/停止/刷新等导航按钮都按该系统重新排版与绘制图标**（XP/98 图标+文字、Win7 连体 Aero、Win8.1 扁平、Win10 细线、鸿蒙圆形、哈基米胶囊+猫爪） |
+| **中英双语界面** | 「设置 → 外观 → 界面语言」可在**中文（简体）/ English** 之间切换，菜单、工具栏、对话框、提示、内置错误页与帮助正文均提供英文；翻译表以中文原文为键，未翻译的条目会安全回退为中文；切换后重启程序整体生效 |
 | **内置无广告 Flash（Ruffle）** | 内置 GitHub 开源 **Ruffle 0.6.0**（Rust + WebAssembly 的 Flash 运行时）：无需插件、**完全没有广告**，并伪造 Flash 插件让老站点不再提示"请安装 Flash"；程序通过虚拟域名给网页供給 Ruffle，并把页面里的 .swf 地址改成由本程序**代取**（绕过站点不发跨域头导致的 CORS 失败）；4399 等 Flash 小游戏实测可玩，直接把 .swf 地址粘到地址栏也能用内置播放器打开 |
 | **广告与弹窗拦截** | **`Ctrl+Shift+A` 手动标记**：进入点选模式，红框实时高亮，点一下那个广告/浮层就记住规则，之后打开同一网站自动隐藏（动态插入的也会持续隐藏）；规则按网站保存于 `adblock.json`，可在「工具 → 广告屏蔽规则」查看/删除/清空；**自动拦截非用户点击弹出的窗口**，状态栏显示拦截数量 |
 | **性能优化** | 后台标签页闲置后**自动挂起**（WebView2 `TrySuspendAsync` / QtWebEngine `Frozen` 生命周期），切回自动恢复；隐藏标签页停止渲染；可选的 DNS 预解析、平滑滚动、图片开关、磁盘缓存上限；设置中实时显示内存与缓存占用 |
@@ -119,7 +139,7 @@
 | 地址栏搜索 | 输入关键字自动调用所选搜索引擎（必应 / 百度 / Google / 搜狗 / DuckDuckGo） |
 | 其它 | 前进后退、停止刷新、主页、页面内查找(`Ctrl+F`)、缩放、开发者工具(`F12`)、另存为、查看源代码、上次会话恢复、窗口位置记忆 |
 | 外部调用 | 支持命令行传入网址：`"lite browser.exe" https://www.example.com` |
-| **帮助系统** | 「帮助 → 使用帮助」(`F1`)：19 个主题逐项解释功能的作用与用法；快捷键、UI 风格、渲染引擎、UA 预设等**从程序读取**，随功能更新自动同步 |
+| **帮助系统** | 「帮助 → 使用帮助」(`F1`)：21 个主题逐项解释功能的作用与用法；快捷键、UI 风格、渲染引擎、UA 预设等**从程序读取**，随功能更新自动同步；英文界面下帮助正文同样会翻译 |
 | **深色模式记忆** | 「查看 → 深色模式」(`Ctrl+Shift+D`) 快速切换，选择写入配置，下次启动保持上次的模式 |
 | **视频播放自检** | 「帮助 → 视频播放自检」：显示当前引擎、WebView2 版本、H.264/AAC/H.265/AV1 与 MSE 支持，并播放测试视频；播不了时直接给出切换内核的步骤 |
 | **桌面快捷方式** | 「工具 → 创建桌面快捷方式 / 创建开始菜单快捷方式」，便携版也可一键生成 |
@@ -216,7 +236,7 @@ liulanqi/
 │  ├─ widgets.py            仿 XP 窗口框架：标题栏、无边框窗口、气泡提示
 │  ├─ dialogs.py            设置（7 页）/ 书签 / 广告规则对话框
 │  ├─ config.py             配置与路径管理
-│  ├─ theme.py              八套主题配色与全局 QSS / 调色板
+│  ├─ theme.py              七套主题配色与全局 QSS / 调色板
 │  └─ icons.py              全部图标的代码绘制（无需图片资源）
 ├─ lib/webview2/            WebView2 程序集（随程序分发）
 ├─ lib/ruffle/              内置 Ruffle（含 MIT / Apache-2.0 许可文件）
@@ -387,7 +407,7 @@ QtWebEngine 引擎下可用软件渲染启动：`"lite browser.exe" --disable-gp
 ## 九、关于
 
 - 名称：**lite browser**
-- 版本：**1.7.1**
+- 版本：**1.7.2**
 - 作者：**lvzian**
 - 界面风格：Windows XP (Luna) / 98 / 7 / 8.1 / 10（可切换，支持深色模式与自定义边框色）
 - 版权：Copyright (C) 2026 lvzian
@@ -402,6 +422,66 @@ QtWebEngine 引擎下可用软件渲染启动：`"lite browser.exe" --disable-gp
 
 完整的分版本更新日志（含每一项功能与修复的说明）见 **[CHANGELOG.md](CHANGELOG.md)**。
 下面是近期版本的摘要：
+
+### 1.7.2
+
+**1. 各系统风格的导航按钮与图标重构，删除 win11 主题**
+
+* 每套主题的**后退 / 前进 / 停止 / 刷新 / 主页**按钮按各自系统重新排版与绘制：
+  XP/98 保持图标+文字的经典 IE 样式；**Win7** 用连体 Aero 按钮（后退/前进拼接、悬停高亮）；
+  **Win8.1** 扁平无圆角、纯图标；**Win10** 细线 Fluent 箭头；**HarmonyOS** 圆形悬停底 + 强调色；
+  **哈基米** 采用 Win11 风格的胶囊悬停底与连体布局。
+* **哈基米主题的按钮图标在表意的同时都带猫爪元素**：后退/前进＝箭头接猫爪、
+  停止＝猫爪托叉号、刷新＝环形箭头中心猫爪、主页＝屋顶上踩猫爪印；
+  其余工具栏图标也改为暖橙色描边并点缀猫爪。
+* 保留各主题原有的**边框风格**（标题栏渐变、圆角、边框配色），只重做控件与图标。
+* **删除 win11 主题**（其 Mica 外观由哈基米主题承载，后者即 Win11 风格 + 猫爪）；
+  旧配置里若写着 `win11` 会自动回退到哈基米主题，不会出现未知主题。
+* 新增 `tests/test_ui_themes.py`（20 个用例 / 104 个子测试）：主题清单与回退、
+  导航字段合法性、五种风格下全部图标均能正常绘制且互不相同、
+  猫爪图标含暖色、图标缓存按风格区分、样式表包含导航规则。
+
+**2. 新增中英双语界面**
+
+* 新增 `litebrowser/i18n.py`：以**中文原文为键**的翻译层，提供
+  `tr()`（单条）、`trf()`（带 `{0}` 占位符）、`tr_text()`（长文本逐行）、
+  `tr_html()`（内置页面短语级）；中文环境下 `tr()` 原样返回、零开销。
+* 新增 `litebrowser/catalog_en.py`（**947 条**英文译文，自动生成）与
+  `catalog_extra.py`（手工条目：错误页文案、主题名、内核名、默认书签等）。
+* 界面文字已全面接入：**717 处**、覆盖 13 个界面模块，由 AST 工具自动包装
+  （f-string 重写为 `trf("模板 {0}", 表达式…)`）。
+* 「设置 → 外观」新增**界面语言**下拉（中文（简体）/ English）；
+  切换后写入配置，重启程序整体生效；英文环境下首次运行生成的默认书签标题也是英文。
+* 内置错误页 / 可疑网址提示页 / 视频自检页 / 帮助正文 / 环境报告
+  通过 `tr_html` / `tr_text` 做短语级翻译，未翻译到的部分保持中文，界面不会出错。
+* 新增 `tests/test_i18n.py`（21 个用例）：语言清单与归一化、中文模式原样返回、
+  英文模式命中译文、未知字符串回退、占位符一致性与坏模板容错、
+  长文本替换与保留、**覆盖率**（621 条界面字面量逐一验证真能翻成英文）、
+  以及**零中文残留**（子进程复现真实启动顺序，覆盖 21 个帮助主题与两个内置页）。
+
+**3. 修复国际化过程中发现的 4 个真实缺陷**
+
+* **打开设置会弹模态框并阻塞**：载入配置时 `setCurrentIndex` 触发语言下拉的
+  `currentIndexChanged`，处理函数弹出"语言已切换"提示框；现用载入标志位屏蔽信号，
+  并且值没变化就直接返回。
+* **帮助里主题名/引擎名仍是中文**（"Windows 98 / 2000 经典、哈基米"）：
+  插值处也走 `tr()`，并补上内核名译文。
+* **短语替换把中文句子切碎**：实测 `直接使用 IP 地址访问` 被替换为
+  `直接使用 IP Address访问`，还出现过 `On startupAutomatic` 这类拼接病句；
+  现限制"只替换短短语、且短语必须独立出现（两侧不能紧邻其它中文）"，
+  长文本改为只做整行匹配，宁可保留中文也不产生病句。
+* **模块级 `tr()` 在导入期执行**：`main.py` 顶部导入界面模块发生在读取
+  `ui_language` 之前，导致 61 处模块级 `tr()`（UA 预设名、诊断项名称等）
+  被永久固定在中文；现把界面模块的导入移入 `main()`，**先定语言再导入**。
+
+**4. 文档：README 改为中英双语，全部截图重新截取**
+
+* README 顶部增加语言切换，正文同时提供**中文全篇**与 **English** 全篇。
+* **全部 26 张截图重新截取**：7 套 UI 主题 + 深色模式 + 主界面 +
+  6 个设置页 + 历史 / 下载 / 气泡 / 帮助 / 关于 / 错误页 / 警告页 / 视频自检 /
+  广告屏蔽 / 启动画面 / 安装向导，并新增**英文主界面**与**英文设置页**两张。
+* 截图改用**本地示例页**渲染（`http://localhost:8123/`），
+  不含广告、登录框与第三方站点内容，可离线复现。
 
 ### 1.7.1
 
@@ -720,3 +800,594 @@ SOFTWARE.
 ```
 
 第三方组件的许可证见上一章「使用的开源项目」。
+
+---
+
+## English
+
+**Language**：[中文](#lite-browser) ｜ **English**
+
+A lightweight browser written in **Python**, whose interface faithfully recreates the
+**Windows XP (Luna)** look, with **seven switchable skins** —
+**Windows XP (Luna) / 98 / 7 / 8.1 / 10 / HarmonyOS / Hakimi** — plus dark mode and a custom
+border colour. The interface itself can be switched between **Chinese (Simplified) and English**.
+
+Rendering is handled by two Chromium engines, chosen automatically:
+
+* **Edge WebView2** (recommended) — uses the Microsoft Edge runtime that comes with the system,
+  Chromium 154, with **full H.264 / AAC codecs**, so HTML5 video plays normally on sites such as bilibili;
+* **QtWebEngine** — the engine bundled with Qt, the cross-platform fallback (the official binary
+  packages only include the open-source codecs).
+
+A built-in **Ruffle** runtime (the open-source Flash player, with no ads) lets Flash game sites run
+directly, and the browser also offers **manual marking of web ads** for blocking plus **automatic popup blocking**.
+
+> Author: **lvzian**　Version: **1.7.2**　Licence: **MIT**　Interface language: **Chinese (Simplified) / English**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-blue.svg)](#五使用方式)
+[![Python](https://img.shields.io/badge/Python-3.13-3776AB.svg)](requirements.txt)
+
+![Main window](docs/screenshot-main.png)
+
+### Built-in ad-free Flash and ad blocking
+
+| Running Flash games with Ruffle (4399 and others) | Manually marking and hiding ad elements (Ctrl+Shift+A) |
+| --- | --- |
+| ![Flash](docs/screenshot-flash.png) | ![Ad blocking](docs/screenshot-adblock.png) |
+
+### Interface styles
+
+Every theme's **navigation buttons are laid out and drawn for the matching system**: XP/98 use the
+classic icon + text style, Windows 7 uses joined Aero buttons, Windows 8.1 is flat with no rounded
+corners, Windows 10 uses thin Fluent lines, HarmonyOS uses a round hover background, and Hakimi
+(Windows 11 style) uses a pill-shaped hover background with paw prints in every button icon.
+
+| Windows XP (Luna) | Windows 98 | Windows 7 (Aero) |
+| --- | --- | --- |
+| ![WinXP](docs/screenshot-theme-xp.png) | ![Win98](docs/screenshot-theme-win98.png) | ![Win7](docs/screenshot-theme-win7.png) |
+
+| Windows 8.1 | Windows 10 | HarmonyOS |
+| --- | --- | --- |
+| ![Win81](docs/screenshot-theme-win81.png) | ![Win10](docs/screenshot-theme-win10.png) | ![HarmonyOS](docs/screenshot-theme-harmony.png) |
+
+| Hakimi (Windows 11 style + paw icons) | Dark mode |
+| --- | --- |
+| ![Hakimi](docs/screenshot-theme-cat.png) | ![Dark](docs/screenshot-theme-dark.png) |
+
+### Bilingual UI
+
+| English main window | English Settings · Appearance (with the language switch) |
+| --- | --- |
+| ![English UI](docs/screenshot-en-main.png) | ![English settings](docs/screenshot-en-appearance.png) |
+
+### Main panels and tools
+
+| Settings · Engine and environment (self-check + one-click repair) | Settings · Network (Flash compatibility) |
+| --- | --- |
+| ![Engine](docs/screenshot-engine.png) | ![Network](docs/screenshot-network.png) |
+
+| Settings · General | Settings · Appearance (seven themes + language switch) |
+| --- | --- |
+| ![Settings](docs/screenshot-settings.png) | ![Appearance](docs/screenshot-appearance.png) |
+
+| Settings · Performance (suspension and memory statistics) | Settings · Privacy and security (ad and popup blocking) |
+| --- | --- |
+| ![Performance](docs/screenshot-performance.png) | ![Privacy](docs/screenshot-privacy.png) |
+
+| History (search keyword highlighting) | Download-complete toast |
+| --- | --- |
+| ![History](docs/screenshot-history.png) | ![Toast](docs/screenshot-toast.png) |
+
+| Custom error page (a cat chasing the mouse) | Malicious URL warning |
+| --- | --- |
+| ![Error page](docs/screenshot-error-cat.png) | ![Warning page](docs/screenshot-warning.png) |
+
+| Video playback self-check | Help topics (F1) |
+| --- | --- |
+| ![Video check](docs/screenshot-video-check.png) | ![Help](docs/screenshot-help.png) |
+
+| Download manager | About |
+| --- | --- |
+| ![Downloads](docs/screenshot-downloads.png) | ![About](docs/screenshot-about.png) |
+
+| Splash screen | Setup wizard |
+| --- | --- |
+| ![Splash](docs/screenshot-splash.png) | ![Setup](docs/screenshot-setup.png) |
+
+---
+
+## 1. Feature list
+
+| Feature | Description |
+| --- | --- |
+| Chromium engine | Dual engine: Edge WebView2 (Chromium 154) / QtWebEngine (Chromium 122), chosen automatically at startup and switchable in Settings |
+| Video playback | Under the WebView2 engine H.264 / AAC / MP3 are supported, so HTML5 video plays normally on sites such as bilibili |
+| **Built-in download module** | `Ctrl+J` opens the download manager: progress, speed, size, status, open file / open containing folder, cancel, delete; **the save directory is set by the user on the first download** and reused afterwards, and can be changed at any time from the downloads window or Settings |
+| **History** | `Ctrl+H`; entries are **grouped by date and each page is annotated with the date and time it was opened**, with **keyword search (matches highlighted like a highlighter pen)**, double-click to open, delete, clear by time range and clear all |
+| **Download-complete toast** | When a download finishes a toast pops up in the bottom-right corner: "A passing Hakimi 🐱 has put 『filename』 in: path, meow." Dismiss it with ✕; it stays while the pointer rests on it and closes itself after 5 seconds without interaction; clicking the toast opens the containing folder |
+| **WebView2 environment self-check and repair** | "Settings → Engine and environment": automatically checks the operating system and architecture, the WebView2 runtime (read from the registry), the component files, the pythonnet interop assemblies, the .NET runtime and whether the data directory is writable, reporting "OK / Note / Error" item by item with advice; a missing runtime can be **downloaded and installed from Microsoft in one click**, and the diagnostic report can be copied or saved; when no page opens at all, `lite browser.exe --env-report` generates the report straight from the command line |
+| **Version in the status bar** | The current version is always shown at the right-hand end of the bottom bar (click it to open "About") |
+| **Incognito mode** | Settings → Privacy and security, the toolbar button or `Ctrl+Shift+N` toggles it; once on, nothing is written to history and cookies and cache live in memory only (InPrivate for WebView2, an in-memory profile for QtWebEngine), with a red "Incognito" badge in the status bar |
+| **Data encryption** | Bookmarks / history / download records are all stored encrypted with **AES-256-GCM**; the master key is protected by Windows DPAPI, or by a passphrase (scrypt-derived); a **plaintext export tool** is included (the menu "Tools → Export plaintext data" or `tools/decrypt_data.py`) |
+| **Multiple UI styles** | Frameless window plus complete skins drawn in code: **Windows XP (Luna) / 98 Classic / 7 (Aero) / 8.1 / 10 / HarmonyOS / Hakimi (the cat, Windows 11 style)** — seven styles, with **dark / light** modes (the choice is remembered) and a **custom border colour** (applied to both the title bar and the window border); switching takes effect immediately with no restart. **Every theme re-lays-out and redraws its back / forward / stop / refresh navigation buttons for that system** (XP/98 icon + text, Windows 7 joined Aero, Windows 8.1 flat, Windows 10 thin lines, HarmonyOS round, Hakimi pills + paws) |
+| **Bilingual UI** | "Settings → Appearance → Interface language" switches between **Chinese (Simplified) / English**; menus, the toolbar, dialogs, hints, the built-in error page and the help text all have English versions; the translation table is keyed by the original Chinese strings and untranslated entries fall back safely to Chinese; restarting the program applies the change everywhere |
+| **Built-in ad-free Flash (Ruffle)** | Bundles the open-source **Ruffle 0.6.0** from GitHub (a Flash runtime written in Rust + WebAssembly): no plugin needed, **completely ad-free**, and it fakes a Flash plugin so old sites stop asking you to "install Flash"; the program serves Ruffle to pages through a virtual domain and rewrites the .swf addresses in the page so that they are **fetched on the page's behalf by this program** (getting around the CORS failures caused by sites that send no cross-origin headers); Flash games such as those on 4399 were tested and are playable, and pasting a .swf address into the address bar also opens it in the built-in player |
+| **Ad and popup blocking** | **`Ctrl+Shift+A` manual marking**: enter pick mode, the element under the pointer is highlighted with a red outline in real time, and one click on the ad or overlay records a rule so it is hidden automatically the next time you open that site (dynamically inserted elements stay hidden too); rules are stored per site in `adblock.json` and can be viewed / deleted / cleared in "Tools → Ad blocking rules"; **windows that pop up without a user click are blocked automatically**, and the status bar shows how many were blocked |
+| **Performance optimisation** | Background tabs **are suspended automatically** once idle (WebView2 `TrySuspendAsync` / QtWebEngine `Frozen` lifecycle) and resume when you switch back; hidden tabs stop rendering; optional DNS prefetching, smooth scrolling, an image switch and a disk cache limit; Settings shows live memory and cache usage |
+| **Cookie and cache management** | "Settings → Privacy and security" and "Tools → Cookie and cache manager" (`Ctrl+Shift+Del`): lists every cookie (domain / name / path / secure / expiry) with search, delete selected, delete all and delete session cookies; plus clear cache, clear site data and a one-click clean-up of all browsing data |
+| **Custom error page** | Network errors and HTTP 4xx/5xx show a hand-drawn error page: **a cat that chases the mouse pointer** (leaving paw prints as it walks and jumping when you get close), showing the status code, an explanation and the URL, with reload / back / home buttons |
+| **HTTPS certificate validation** | A certificate problem opens a details dialog (site being visited, problem, issued to, issuer, validity period) and the user decides whether to continue; a "strict mode" can also be enabled to refuse outright; the left-hand side of the address bar shows connection security (padlock / warning) in real time |
+| **Malicious URL warning** | A local scoring engine: blocklist / allowlist files (`blocklist.txt`) plus heuristics (raw IP address, non-standard port, punycode homoglyphs, `@` disguise, sensitive words, high-risk suffixes, over-long sub-domains, over-long URLs…); on a hit a red warning page appears where you can go back or choose "I understand the risk, continue" |
+| **Page saving / printing** | File menu: Save as (**MHTML single file** / complete web page / HTML only, `Ctrl+S`), **Print** (`Ctrl+P`; WebView2 brings up the system print dialog, QtWebEngine produces a print-preview PDF) and **Export PDF** |
+| **Editable User-Agent** | "Settings → Network": presets for Windows Chrome/Edge/Firefox, macOS Safari, Linux, Android, iPhone/iPad, WeChat and more, or a fully custom string, with a live preview of the value in effect |
+| XP-style interface | Frameless window with a Luna blue gradient title bar, rounded corners and an XP-style toolbar / menu / tabs / status bar / scrollbars, with every icon drawn in code |
+| Bookmarks | Favourites menu, bookmarks bar, `Ctrl+D` to add and an organiser (edit / delete / sort / open), stored encrypted |
+| Full screen | `F11` or the menu "View → Full screen"; all toolbars are hidden in full screen, `Esc` leaves it, and HTML5 full screen inside pages is supported as well |
+| Custom home page | "Settings → General" lets you set the home page address and supports "use current page / use default page / use blank page" |
+| Settings - About | "Settings → About lite browser" shows the name, version, **author: lvzian**, the current rendering engine and its decoding capabilities |
+| Multiple tabs | New / close / drag to reorder, a `+` button for a new tab, and `target="_blank"` opens a new tab automatically |
+| Address bar search | Typing a keyword invokes the selected search engine (Bing / Baidu / Google / Sogou / DuckDuckGo) |
+| Other | Back and forward, stop and reload, home, find in page (`Ctrl+F`), zoom, developer tools (`F12`), save as, view source, restoring the previous session and remembering the window position |
+| External invocation | URLs can be passed on the command line: `"lite browser.exe" https://www.example.com` |
+| **Help system** | "Help → Help topics" (`F1`): 21 topics explain what each feature does and how to use it; shortcuts, UI styles, rendering engines and UA presets are **read from the program**, so the help stays in sync automatically as features are added; the help text is translated in the English UI too |
+| **Dark mode remembered** | "View → Dark mode" (`Ctrl+Shift+D`) toggles it quickly and writes the choice to the configuration, so the next launch keeps the last mode |
+| **Video playback self-check** | "Help → Video playback self-check": shows the current engine, the WebView2 version, H.264/AAC/H.265/AV1 and MSE support, and plays a test video; when playback fails it gives the steps for switching engines |
+| **Desktop shortcut** | "Tools → Create desktop shortcut / Create Start menu shortcut"; portable builds can generate them in one click too |
+| **Startup optimisation** | About 0.19 s to show the splash screen and about 2.7 s to open the home page (packaged build, warm start); .NET Framework hosts WebView2, stylesheets are applied once at the end, the status bar uses a single container, and the WebView2 environment is pre-warmed at startup and shared by all tabs |
+
+---
+
+## 2. Rendering engines
+
+| | Edge WebView2 | QtWebEngine |
+| --- | --- | --- |
+| Chromium version | Chromium 154 (updated with Edge) | Chromium 122 (updated with Qt) |
+| H.264 / AAC | ✅ Supported | ❌ Not supported |
+| Video sites such as bilibili | ✅ Plays | ❌ Reports "HTML5 player not supported" |
+| Runtime dependency | The WebView2 runtime included with Windows 10/11 | None (bundled with the program) |
+| Data directory | `%APPDATA%\LiteBrowser\webview2` | `%APPDATA%\LiteBrowser\profile` |
+
+At startup the program detects what is available: if WebView2 can be used it is used, otherwise it
+falls back to QtWebEngine. You can also force a choice in
+"Settings → Appearance → Rendering engine" (restarting the program is required after switching).
+
+---
+
+## 3. Data encryption and the decryption tool
+
+### Encryption
+
+| Item | Description |
+| --- | --- |
+| Algorithm | AES-256-GCM (authenticated, tamper-proof) |
+| Encrypted files | `data\bookmarks.dat`, `data\history.dat`, `data\downloads.dat` |
+| File format | 4-byte magic number `LTB1` + version number + 12-byte random nonce + ciphertext |
+| Master key | `master.key`, a 32-byte random key |
+| Default protection | **Windows DPAPI** (`CryptProtectData`); only the same Windows account can unlock it |
+| Optional protection | **Passphrase** (key derived with scrypt n=2^14, r=8, p=1), convenient for carrying data between machines; prompted for at startup |
+
+"Settings → Privacy and security → Data encryption" lets you set or remove a passphrase and shows the
+current encryption status.
+
+### Decryption tool
+
+**Option 1 (graphical interface)**: the menu "Tools → Export plaintext data…", then choose an output directory.
+
+**Option 2 (command line)**:
+
+```bat
+rem 查看数据目录与加密状态
+python tools\decrypt_data.py --list
+
+rem 解密到 .\decrypted（DPAPI 保护的密钥需要同一 Windows 账户）
+python tools\decrypt_data.py --out D:\备份
+
+rem 设置过口令时
+python tools\decrypt_data.py --password 你的口令 --out D:\备份
+
+rem 指定数据目录（例如绿色便携模式）
+python tools\decrypt_data.py --data-dir D:\litebrowser\data --out D:\备份
+```
+
+Export results: `bookmarks.json`, `history.json`, `downloads.json` (formatted plaintext JSON).
+
+> Note: in DPAPI mode the key is tied to the Windows account, so it cannot be decrypted on another
+> machine or under another account; if you need to move data between machines, set a passphrase in
+> Settings first and then decrypt with that passphrase.
+
+---
+
+## 4. Directory structure
+
+```
+liulanqi/
+├─ lite_browser.py          Program entry point (starting from source)
+├─ litebrowser/             Main application package
+│  ├─ main.py               Application initialisation (engine choice, vault unlock, styles, DPI)
+│  ├─ browser.py            Main browser window (tabs, address bar, bookmarks bar, full screen, menus)
+│  ├─ engine.py             Rendering engine abstraction layer and factory
+│  ├─ wv2engine.py          Edge WebView2 engine backend (H.264/AAC, Ruffle asset serving)
+│  ├─ qtengine.py           QtWebEngine engine backend (the fallback)
+│  ├─ ruffle.py             Serving the built-in ad-free Flash runtime (Ruffle) and fetching .swf files on the page's behalf
+│  ├─ safefetch.py          Restricted HTTP fetching with SSRF protection (per-hop validation + IP pinning)
+│  ├─ logging_setup.py      Unified logging (off by default; LITE_BROWSER_LOG=1 writes to a file)
+│  ├─ adblock.py            User-marked ad blocking (rule storage + picker script)
+│  ├─ webview2doctor.py     Runtime environment self-check and one-click repair
+│  ├─ videocheck.py         Video playback self-check page
+│  ├─ errors.py             Custom error page (the cat chasing the mouse) and suspicious-URL warning page
+│  ├─ netsec.py             Certificate validation and suspicious-URL heuristics
+│  ├─ crypto.py             Data encryption: AES-256-GCM + DPAPI / passphrase
+│  ├─ bookmarks.py          Bookmark storage (encrypted)
+│  ├─ history.py            History (encrypted, grouped by date)
+│  ├─ downloads.py          Download management (directory rules, progress, records)
+│  ├─ managers.py           Download manager window, history window (search highlighting)
+│  ├─ datamanage.py         Cookie and cache manager window
+│  ├─ performance.py        Background suspension, memory and cache statistics
+│  ├─ useragent.py          User-Agent presets
+│  ├─ shelllink.py          Creating desktop / Start menu shortcuts
+│  ├─ help.py               Help system (content stays in sync with the features automatically)
+│  ├─ widgets.py            XP-style window frame: title bar, frameless window, toast
+│  ├─ dialogs.py            Settings (7 pages) / bookmarks / ad rule dialogs
+│  ├─ config.py             Configuration and path management
+│  ├─ theme.py              The seven theme palettes plus the global QSS / palette
+│  └─ icons.py              All icons drawn in code (no image assets needed)
+├─ lib/webview2/            WebView2 assemblies (shipped with the program)
+├─ lib/ruffle/              Bundled Ruffle (with its MIT / Apache-2.0 licence files)
+├─ tools/
+│  ├─ make_icon.py          Generates assets/lite_browser.ico
+│  ├─ decrypt_data.py       [Decryption tool] exports plaintext JSON
+│  ├─ build_installer.py    Builds the Windows installer and the portable build
+│  ├─ installer/            C# source of the installer / uninstaller
+│  ├─ slim_dist.py          Trims the packaged build according to its dependencies
+│  └─ version_info.txt      exe version info (company name lvzian)
+├─ assets/  docs/           Icon assets / screenshots and the codec self-check page
+├─ tests/                   Unit tests (149 cases, standard-library unittest only)
+├─ .github/workflows/       GitHub Actions: runs pytest + ruff on windows
+├─ dist/lite browser/       [Prebuilt exe] double-click lite browser.exe to run it
+├─ run.bat                  Starts from source
+├─ build_exe.bat            One-click exe packaging
+├─ CHANGELOG.md             The full changelog (since v1.1.0086)
+├─ ruff.toml                Lint configuration (hard problems only: syntax errors / undefined names)
+└─ requirements.txt         Dependencies: PySide6, pythonnet, cryptography
+```
+
+---
+
+## 5. Usage
+
+### 1. Install with the installer package (recommended, ideal for distribution)
+
+Download from the Releases page:
+
+```
+lite browser-<版本>-安装程序.exe     (installer)
+lite browser-<版本>-便携版.zip       (no installation, unzip and run)
+```
+
+Double-click the installer and follow the wizard:
+
+* Per-user installation only (default `%LOCALAPPDATA%\Programs\lite browser`), **no administrator rights required**
+* Optionally creates desktop / Start menu shortcuts, and optionally launches the program after installation
+* Registers itself in the Windows "Installed apps / Programs and Features" list, from which it can be
+  uninstalled, as it can from the Start menu
+* The uninstaller lets you choose whether to delete your personal data as well (kept by default)
+
+![Setup wizard](docs/screenshot-setup.png)
+
+Silent installation (bulk deployment):
+
+```bat
+"lite browser-<版本>-安装程序.exe" /S /DIR="D:\Program Files\lite browser"
+rem Optional: /NODESKTOP /NOSTARTMENU /NORUN
+```
+
+Unzip the portable build and double-click `lite browser.exe` to use it; you can also create a desktop
+icon with the menu "Tools → Create desktop shortcut".
+
+### 2. Run the packaged program directly
+
+```
+dist\lite browser\lite browser.exe
+```
+
+### 3. Run from source
+
+```bat
+pip install -r requirements.txt
+python lite_browser.py
+```
+
+### 4. Repackage it yourself
+
+```bat
+build_exe.bat                                  rem 打包程序到 dist\lite browser
+python tools\build_installer.py --portable     rem 生成安装包与便携版（默认输出到当前目录）
+```
+
+`tools\build_installer.py` uses the C# compiler that ships with Windows (`csc.exe` from
+.NET Framework 4.x) to compile `tools\installer\installer.cs` / `uninstaller.cs` into native
+installer and uninstaller programs, then compresses the program directory and appends it to the end
+of the installer exe (with a 12-byte trailer so the installer can read it back).
+
+### 5. Run the tests
+
+The tests only need the Python standard library `unittest` (`pytest` is optional) and no extra dependencies:
+
+```bat
+python -m unittest discover -s tests -t .      rem 运行全部单元测试
+python -m unittest tests.test_safefetch -v     rem 只跑某一个模块
+```
+
+**149 cases** in total, covering SSRF protection (address classes, schemes, redirect chains and hop
+limits, size and type limits), Ruffle session tokens, false-positive/negative statistics for the
+suspicious-URL scoring, ad blocking rules and their injection script, AES-256-GCM encryption and
+decryption with its failure paths, and history / download management / configuration / address-bar
+input normalisation.
+
+The repository also ships a GitHub Actions workflow (`.github/workflows/tests.yml`) that runs
+`ruff check litebrowser tests` and `python -m pytest tests -v` on **windows-latest + Python 3.13**,
+triggered on pull requests and pushes to the main branch.
+
+> When troubleshooting, set the `LITE_BROWSER_LOG=1` environment variable and the log is written to
+> `litebrowser.log` in the data directory (no logging is produced by default); `LITE_BROWSER_TIMING=1`
+> additionally records startup timings.
+
+---
+
+## 6. Keyboard shortcuts
+
+| Shortcut | Function |
+| --- | --- |
+| `Ctrl+T` / `Ctrl+W` | New / close tab |
+| `Ctrl+J` | Download manager |
+| `Ctrl+H` | History |
+| `Ctrl+Shift+N` | Toggle incognito mode |
+| `Ctrl+D` / `Ctrl+Shift+O` | Add to favourites / organise favourites |
+| `Ctrl+L` / `Ctrl+F` | Focus the address bar / find in page |
+| `Ctrl+S` / `Ctrl+P` | Save page as / print |
+| `Ctrl+Shift+Del` | Cookie and cache manager |
+| `F1` | Help topics |
+| `Ctrl+U` / `F12` | View source / developer tools |
+| `F5` / `Ctrl+R` | Reload |
+| `F11` | Full screen / leave full screen |
+| `Esc` | Leave full screen, close the find bar |
+| `Ctrl+ +` / `Ctrl+ -` / `Ctrl+0` | Zoom in / zoom out / actual size |
+| `Alt+←` / `Alt+→` | Back / forward |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Switch tabs |
+| `Alt+F4` | Quit |
+
+---
+
+## 7. Data file locations
+
+| Content | Path |
+| --- | --- |
+| Settings | `%APPDATA%\LiteBrowser\settings.json` |
+| Bookmarks (encrypted) | `%APPDATA%\LiteBrowser\data\bookmarks.dat` |
+| History (encrypted) | `%APPDATA%\LiteBrowser\data\history.dat` |
+| Download records (encrypted) | `%APPDATA%\LiteBrowser\data\downloads.dat` |
+| Master key | `%APPDATA%\LiteBrowser\master.key` |
+| Engine cache / Cookies | `%APPDATA%\LiteBrowser\profile`, `webview2` |
+
+> Portable mode: put an empty `portable.txt` next to `lite browser.exe` and the data is stored in the
+> `data` sub-folder of the program directory instead.
+> The plaintext `bookmarks.json` of older versions is migrated and encrypted automatically on first launch.
+
+---
+
+## 8. FAQ
+
+**Q: bilibili says "your current browser does not support the HTML5 player"?**
+That means the QtWebEngine engine is in use (it has no H.264/AAC). Go to
+"Settings → Appearance → Rendering engine", choose "Edge WebView2" and restart. You can also open
+`docs/codec-test.html` in this program to check decoding support yourself.
+
+**Q: Where do I change the download directory?**
+Three places: ① a directory chooser appears on the first download; ② the "Change…" button in the
+downloads window (`Ctrl+J`); ③ Settings → General → Downloads → Browse. Tick "Ask where to save each
+file" to go back to being asked every time.
+
+**Q: Does incognito mode really not record anything?**
+Once it is on, nothing is written to history and `master.key` and the `.dat` files gain no browsing
+traces; cookies and cache live in memory (InPrivate for WebView2 / an in-memory profile for
+QtWebEngine) and disappear when the program exits. Note that download records are still kept (the
+files did land on disk) and can be deleted in the downloads window.
+
+**Q: What if I forget my encryption passphrase?**
+A passphrase cannot be recovered. You can delete `master.key` and the `data` directory to start over
+(the existing encrypted data will be unrecoverable), or use the DPAPI key of another account. It is
+advisable to back up `master.key` yourself after setting a passphrase.
+
+**Q: Pages are blank or show garbled output?**
+Under the QtWebEngine engine you can start with software rendering:
+`"lite browser.exe" --disable-gpu`
+
+**Q: How do I restore the default settings?**
+Delete the `%APPDATA%\LiteBrowser` folder and start the program again.
+
+---
+
+## 9. About
+
+- Name: **lite browser**
+- Version: **1.7.2**
+- Author: **lvzian**
+- Interface styles: Windows XP (Luna) / 98 / 7 / 8.1 / 10 (switchable, with dark mode and a custom border colour)
+- Copyright: Copyright (C) 2026 lvzian
+
+The same information is available inside the program under "Settings → About lite browser".
+
+![About](docs/screenshot-about.png)
+
+---
+
+## 10. Changelog
+
+The complete version-by-version changelog (describing every feature and fix) is in
+**[CHANGELOG.md](CHANGELOG.md)**. Recent versions are summarised below.
+
+### 1.7.2
+
+**1. Navigation buttons and icons rebuilt for every system style; the win11 theme removed**
+
+* Each theme's **back / forward / stop / refresh / home** buttons are laid out and drawn for its own
+  system: XP/98 keep the classic IE look with icon + text; **Windows 7** uses joined Aero buttons
+  (back/forward fused together, highlighted on hover); **Windows 8.1** is flat and unrounded with
+  icons only; **Windows 10** uses thin Fluent arrows; **HarmonyOS** uses a round hover background
+  with the accent colour; **Hakimi** adopts a Windows 11-style pill hover background and joined layout.
+* **Every Hakimi button icon carries a paw-print motif while still conveying its meaning**: back and
+  forward are arrows ending in a paw, stop is a paw holding a cross, refresh is a ring arrow with a
+  paw in the centre, home is a paw print on a roof; the other toolbar icons were changed to warm
+  orange outlines accented with paws as well.
+* Each theme keeps its original **border style** (title bar gradient, corner radius, border colours);
+  only the controls and icons were redrawn.
+* **The win11 theme was removed** (its Mica look is carried by the Hakimi theme, which is Windows 11
+  style plus paws); a `win11` value in an old configuration falls back to the Hakimi theme
+  automatically, so an unknown theme can never appear.
+* Added `tests/test_ui_themes.py` (20 cases / 104 sub-tests): the theme list and the fallback,
+  validity of the navigation fields, every icon drawing correctly and distinctly in the five styles,
+  the paw icons containing warm colours, the icon cache being separated by style, and the stylesheet
+  containing the navigation rules.
+
+**2. New Chinese/English bilingual UI**
+
+* Added `litebrowser/i18n.py`: a translation layer **keyed by the original Chinese strings**,
+  providing `tr()` (a single string), `trf()` (with `{0}` placeholders), `tr_text()` (long text,
+  line by line) and `tr_html()` (phrase level, for the built-in pages); in a Chinese environment
+  `tr()` returns its input unchanged at zero cost.
+* Added `litebrowser/catalog_en.py` (**947 English translations**, generated automatically) and
+  `catalog_extra.py` (hand-written entries: error-page wording, theme names, engine names, default
+  bookmarks and so on).
+* UI strings are now fully wired in: **717 call sites**, covering 13 UI modules, wrapped
+  automatically by an AST tool (f-strings rewritten as `trf("template {0}", expression…)`).
+* "Settings → Appearance" gained an **Interface language** drop-down (Chinese (Simplified) / English);
+  the choice is written to the configuration and applies everywhere after a restart; in an English
+  environment the default bookmark titles created on first run are English too.
+* The built-in error page / suspicious-URL warning page / video self-check page / help text /
+  environment report use `tr_html` / `tr_text` for phrase-level translation; anything not translated
+  simply stays in Chinese instead of breaking the UI.
+* Added `tests/test_i18n.py` (21 cases): the language list and normalisation, pass-through in Chinese
+  mode, translation hits in English mode, fallback for unknown strings, placeholder consistency and
+  tolerance of bad templates, long-text substitution and preservation, **coverage** (621 UI literals
+  verified one by one to actually translate into English) and **zero Chinese residue** (a subprocess
+  reproduces the real startup order, covering 21 help topics and both built-in pages).
+
+**3. Four real defects found during internationalisation, fixed**
+
+* **Opening Settings raised a modal dialog and blocked**: while the configuration was loading,
+  `setCurrentIndex` fired the language drop-down's `currentIndexChanged` and the handler showed a
+  "language changed" message box; a loading flag now suppresses the signal, and the handler returns
+  immediately when the value has not changed.
+* **Theme and engine names in Help were still Chinese** ("Windows 98 / 2000 经典、哈基米"):
+  interpolation points now go through `tr()` as well, and the missing engine-name translations were added.
+* **Phrase substitution chopped Chinese sentences apart**: in testing `直接使用 IP 地址访问` became
+  `直接使用 IP Address访问`, and concatenations such as `On startupAutomatic` also appeared;
+  substitution is now restricted to short phrases that occur standalone (with no adjacent Chinese on
+  either side), and long text is matched as whole lines only, preferring to keep Chinese rather than
+  produce a broken sentence.
+* **Module-level `tr()` ran during import**: importing the UI modules at the top of `main.py`
+  happened before `ui_language` was read, permanently freezing 61 module-level `tr()` calls (UA preset
+  names, diagnostic item names and so on) in Chinese; the UI module imports were moved into `main()`,
+  so **the language is decided before the imports**.
+
+**4. Documentation: the README is now bilingual and every screenshot was retaken**
+
+* A language switch was added at the top of the README, and the body now provides both
+  **the complete Chinese text** and **the complete English text**.
+* **All 26 screenshots were retaken**: the 7 UI themes + dark mode + the main window + the 6 settings
+  pages + history / downloads / toast / help / about / error page / warning page / video self-check /
+  ad blocking / splash screen / setup wizard, plus two new ones, **the English main window** and
+  **the English settings page**.
+* Screenshots are now rendered from **a local sample page** (`http://localhost:8123/`) containing no
+  ads, login boxes or third-party site content, so they can be reproduced offline.
+
+### Earlier versions
+
+The complete history for 1.7.1 down to 1.0.1 is in the Chinese section above and in
+**[CHANGELOG.md](CHANGELOG.md)**; short summaries of the most recent three are given here.
+
+* **1.7.1** — Fixed a multi-tab error-page overwrite bug, an address-bar problem reported directly by
+  users and a performance problem that got worse the longer you browsed, and freed the data
+  decryption tool from its Qt dependency; **the user data format is completely unchanged**
+  (tests went from 104 to 149).
+* **1.7.0** — A security and engineering-quality iteration carried out against an external code-review
+  checklist: hardened the Ruffle proxy against SSRF (per-hop validation, all IPs pinned, size limits,
+  real SWF only) and replaced Referer-based authorisation with random per-session tokens; corrected
+  wording and semantics; added the `EngineCapabilities` / `EngineState` / `TaskBridge` abstractions;
+  and added 104 unit tests plus a GitHub Actions workflow. The product positioning, UI styles and
+  user data format are unchanged.
+* **1.6.95** — Removed the macOS UI style and added the built-in ad-free Flash runtime
+  (Ruffle 0.6.0) with local asset serving and a `.swf` fetching proxy, user-marked ad blocking
+  (`Ctrl+Shift+A`) and automatic popup blocking; Ruffle was trimmed from 28 MB to 14.1 MB and the
+  help system grew to 21 topics.
+
+---
+
+## 11. Open-source projects used
+
+This project builds on the following open-source projects; thanks to their authors and communities
+for their generosity:
+
+| Project | Purpose | Licence | URL |
+| --- | --- | --- | --- |
+| **Ruffle** | The built-in ad-free Flash runtime (Rust → WebAssembly) that runs Flash content in a modern engine | MIT / Apache-2.0 | <https://github.com/ruffle-rs/ruffle> |
+| **Qt for Python (PySide6)** | All interface, window, widget and theme drawing | LGPL-3.0 | <https://github.com/qtproject/pyside-pyside-setup> |
+| **Qt WebEngine** | The QtWebEngine rendering engine (the fallback) | LGPL-3.0 | <https://github.com/qt/qtwebengine> |
+| **pythonnet** | Python / .NET interop, used to drive Edge WebView2 | MIT | <https://github.com/pythonnet/pythonnet> |
+| **clr_loader** | .NET runtime loading (.NET Framework / .NET) | MIT | <https://github.com/pythonnet/clr-loader> |
+| **cryptography** | AES-256-GCM encryption and scrypt passphrase derivation | Apache-2.0 / BSD-3-Clause | <https://github.com/pyca/cryptography> |
+| **CFFI** | The underlying C interface of cryptography | MIT | <https://github.com/python-cffi/cffi> |
+| **PyInstaller** | Packaging into a single-file executable (a development-time tool) | GPL-2.0-or-later (with the packaging exception) | <https://github.com/pyinstaller/pyinstaller> |
+| **Microsoft Edge WebView2** | The system-level Chromium rendering runtime and SDK | Microsoft software licence terms | <https://learn.microsoft.com/microsoft-edge/webview2/> |
+
+Additional notes:
+
+* The bundled Ruffle is distributed under its **MIT / Apache-2.0 dual licence**, and its licence texts
+  ship with the program (see `lib/ruffle/LICENSE_MIT` and `lib/ruffle/LICENSE_APACHE`);
+* Qt / PySide6 are distributed under **LGPL-3.0**; this project uses them through dynamic linking and
+  has not modified their source code;
+* The Edge WebView2 runtime is a system component of Windows 10 / 11; the program calls it through
+  its official SDK and does not redistribute the runtime itself;
+* This project is released under the **MIT licence** (see [LICENSE](LICENSE)), which is compatible
+  with the licences of the dependencies listed above.
+
+## 12. Disclaimer
+
+* This project is for learning and personal use only; please comply with your local laws and
+  regulations and with the terms of service of the sites you visit;
+* The built-in ad blocking is a **manual, user-marked** mechanism: it does not subscribe to online
+  rule lists and does not target any particular website;
+* Flash compatibility depends on the third-party open-source emulator Ruffle, and its compatibility
+  is determined by that project; this project makes no guarantee whatsoever about the availability of
+  any specific piece of Flash content.
+
+## 13. Licence
+
+This project is released under the **MIT licence**:
+
+```
+MIT License
+
+Copyright (c) 2026 lvzian
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+Licences for third-party components are listed in the previous chapter, "Open-source projects used".

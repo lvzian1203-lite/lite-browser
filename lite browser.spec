@@ -43,8 +43,8 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    version='tools/version_info.txt',
-    icon=['assets/lite_browser.ico'],
+    version='D:/dshStar/liulanqi/tools/version_info.txt',
+    icon=['D:/dshStar/liulanqi/assets/lite_browser.ico'],
 )
 coll = COLLECT(
     exe,

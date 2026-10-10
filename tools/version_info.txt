@@ -17,12 +17,12 @@ VSVersionInfo(
           [
             StringStruct('CompanyName', 'lvzian'),
             StringStruct('FileDescription', 'lite browser - 基于 Chromium 内核的仿 Windows XP 风格浏览器'),
-            StringStruct('FileVersion', '1.7.1'),
+            StringStruct('FileVersion', '1.7.2'),
             StringStruct('InternalName', 'lite browser'),
             StringStruct('LegalCopyright', 'Copyright (C) 2026 lvzian'),
             StringStruct('OriginalFilename', 'lite browser.exe'),
             StringStruct('ProductName', 'lite browser'),
-            StringStruct('ProductVersion', '1.7.1')
+            StringStruct('ProductVersion', '1.7.2')
           ]
         )
       ]

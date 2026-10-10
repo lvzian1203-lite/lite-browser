@@ -16,8 +16,8 @@ using Microsoft.Win32;
 [assembly: AssemblyCompany("lvzian")]
 [assembly: AssemblyCopyright("Copyright (C) 2026 lvzian")]
 [assembly: AssemblyDescription("lite browser 卸载程序")]
-[assembly: AssemblyVersion("1.7.1.0")]
-[assembly: AssemblyFileVersion("1.7.1.0")]
+[assembly: AssemblyVersion("1.7.2.0")]
+[assembly: AssemblyFileVersion("1.7.2.0")]
 
 namespace LiteBrowserUninstall
 {
