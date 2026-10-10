@@ -115,6 +115,8 @@ class HighlightDelegate(QStyledItemDelegate):
         painter.restore()
 from .widgets import XPDialog
 
+from .i18n import tr, trf
+
 
 class DownloadManagerDialog(XPDialog):
     """内置下载管理器：查看进度、打开文件、更改下载目录。"""
@@ -125,7 +127,7 @@ class DownloadManagerDialog(XPDialog):
         parent: QWidget | None = None,
         folder_asker: Optional[Callable[[str], Optional[str]]] = None,
     ) -> None:
-        super().__init__(parent, title="下载", icon_name="download")
+        super().__init__(parent, title=tr("下载"), icon_name="download")
         self.manager = manager
         self.folder_asker = folder_asker
         self.setMinimumSize(720, 460)
@@ -136,14 +138,14 @@ class DownloadManagerDialog(XPDialog):
 
         # 下载目录
         folder_row = QHBoxLayout()
-        folder_row.addWidget(QLabel("下载目录(D)："))
+        folder_row.addWidget(QLabel(tr("下载目录(D)：")))
         self.lbl_folder = QLineEdit(str(self.manager.default_folder()))
         self.lbl_folder.setReadOnly(True)
         self.lbl_folder.setCursorPosition(0)
         self.lbl_folder.setToolTip(str(self.manager.default_folder()))
         folder_row.addWidget(self.lbl_folder, 1)
-        self.btn_change_folder = QPushButton("更改(C)...")
-        self.btn_open_folder = QPushButton("打开目录(O)")
+        self.btn_change_folder = QPushButton(tr("更改(C)..."))
+        self.btn_open_folder = QPushButton(tr("打开目录(O)"))
         folder_row.addWidget(self.btn_change_folder)
         folder_row.addWidget(self.btn_open_folder)
         layout.addLayout(folder_row)
@@ -151,7 +153,7 @@ class DownloadManagerDialog(XPDialog):
         # 列表
         self.tree = QTreeWidget(self)
         self.tree.setColumnCount(4)
-        self.tree.setHeaderLabels(["文件名", "大小", "状态", "开始时间"])
+        self.tree.setHeaderLabels([tr("文件名"), tr("大小"), tr("状态"), tr("开始时间")])
         self.tree.setRootIsDecorated(False)
         self.tree.setSelectionMode(QAbstractItemView.SingleSelection)
         self.tree.setUniformRowHeights(True)
@@ -164,12 +166,12 @@ class DownloadManagerDialog(XPDialog):
 
         # 按钮
         row = QHBoxLayout()
-        self.btn_open = QPushButton("打开(O)")
-        self.btn_folder = QPushButton("打开所在文件夹(F)")
-        self.btn_cancel = QPushButton("取消下载(C)")
-        self.btn_remove = QPushButton("从列表删除(D)")
-        self.btn_clear = QPushButton("清除已完成")
-        self.btn_close = QPushButton("关闭")
+        self.btn_open = QPushButton(tr("打开(O)"))
+        self.btn_folder = QPushButton(tr("打开所在文件夹(F)"))
+        self.btn_cancel = QPushButton(tr("取消下载(C)"))
+        self.btn_remove = QPushButton(tr("从列表删除(D)"))
+        self.btn_clear = QPushButton(tr("清除已完成"))
+        self.btn_close = QPushButton(tr("关闭"))
         for button in (self.btn_open, self.btn_folder, self.btn_cancel,
                        self.btn_remove, self.btn_clear):
             row.addWidget(button)
@@ -237,9 +239,9 @@ class DownloadManagerDialog(XPDialog):
     def _change_folder(self) -> None:
         asker = self.folder_asker
         if asker is None:
-            chosen = QFileDialog.getExistingDirectory(self, "选择下载目录", str(self.manager.default_folder()))
+            chosen = QFileDialog.getExistingDirectory(self, tr("选择下载目录"), str(self.manager.default_folder()))
         else:
-            chosen = asker("请选择默认下载目录：")
+            chosen = asker(tr("请选择默认下载目录："))
         if chosen:
             self.manager.set_default_folder(chosen)
             self.lbl_folder.setText(chosen)
@@ -274,7 +276,7 @@ class DownloadManagerDialog(XPDialog):
             return
         if item.state == "running":
             answer = QMessageBox.question(
-                self, APP_NAME, "该任务正在下载，确定要取消并删除吗？",
+                self, APP_NAME, tr("该任务正在下载，确定要取消并删除吗？"),
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
             )
             if answer != QMessageBox.Yes:
@@ -292,7 +294,7 @@ class HistoryDialog(XPDialog):
         parent: QWidget | None = None,
         open_callback: Optional[Callable[[str], None]] = None,
     ) -> None:
-        super().__init__(parent, title="历史记录", icon_name="history")
+        super().__init__(parent, title=tr("历史记录"), icon_name="history")
         self.store = store
         self.open_callback = open_callback
         self.setMinimumSize(760, 500)
@@ -302,9 +304,9 @@ class HistoryDialog(XPDialog):
         layout.setSpacing(8)
 
         search_row = QHBoxLayout()
-        search_row.addWidget(QLabel("搜索(S)："))
+        search_row.addWidget(QLabel(tr("搜索(S)：")))
         self.edit_search = QLineEdit()
-        self.edit_search.setPlaceholderText("按标题或网址筛选")
+        self.edit_search.setPlaceholderText(tr("按标题或网址筛选"))
         search_row.addWidget(self.edit_search, 1)
         self.lbl_count = QLabel("")
         search_row.addWidget(self.lbl_count)
@@ -312,7 +314,7 @@ class HistoryDialog(XPDialog):
 
         self.tree = QTreeWidget(self)
         self.tree.setColumnCount(3)
-        self.tree.setHeaderLabels(["时间", "标题", "网址"])
+        self.tree.setHeaderLabels([tr("时间"), tr("标题"), tr("网址")])
         self.tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.tree.header().setSectionResizeMode(0, QHeaderView.Fixed)
         self.tree.setColumnWidth(0, 120)
@@ -327,23 +329,23 @@ class HistoryDialog(XPDialog):
         layout.addWidget(self.tree, 1)
 
         row = QHBoxLayout()
-        self.btn_open = QPushButton("打开(O)")
-        self.btn_remove = QPushButton("删除(D)")
-        self.btn_clear = QPushButton("清空全部(L)")
+        self.btn_open = QPushButton(tr("打开(O)"))
+        self.btn_remove = QPushButton(tr("删除(D)"))
+        self.btn_clear = QPushButton(tr("清空全部(L)"))
         row.addWidget(self.btn_open)
         row.addWidget(self.btn_remove)
         row.addSpacing(14)
-        row.addWidget(QLabel("按时间清除："))
+        row.addWidget(QLabel(tr("按时间清除：")))
         self.combo_range = QComboBox()
-        self.combo_range.addItem("最近 1 小时以前", ("hours", 1))
-        self.combo_range.addItem("今天以前", ("today", 0))
-        self.combo_range.addItem("最近 7 天以前", ("days", 7))
-        self.combo_range.addItem("最近 30 天以前", ("days", 30))
+        self.combo_range.addItem(tr("最近 1 小时以前"), ("hours", 1))
+        self.combo_range.addItem(tr("今天以前"), ("today", 0))
+        self.combo_range.addItem(tr("最近 7 天以前"), ("days", 7))
+        self.combo_range.addItem(tr("最近 30 天以前"), ("days", 30))
         row.addWidget(self.combo_range)
-        self.btn_purge = QPushButton("清除(G)")
+        self.btn_purge = QPushButton(tr("清除(G)"))
         row.addWidget(self.btn_purge)
         row.addStretch(1)
-        self.btn_close = QPushButton("关闭")
+        self.btn_close = QPushButton(tr("关闭"))
         row.addWidget(self.btn_close)
         layout.addLayout(row)
 
@@ -365,7 +367,7 @@ class HistoryDialog(XPDialog):
         groups = self.store.grouped(keyword)
         total = 0
         for label, entries in groups:
-            parent = QTreeWidgetItem([label, f"（{len(entries)} 条）", ""])
+            parent = QTreeWidgetItem([label, trf('（{0} 条）', len(entries)), ""])
             font = parent.font(0)
             font.setBold(True)
             parent.setFont(0, font)
@@ -377,12 +379,12 @@ class HistoryDialog(XPDialog):
                 child = QTreeWidgetItem([entry.time_text, entry.title, entry.url])
                 child.setData(0, Qt.UserRole, entry.url)
                 if entry.visit_count > 1:
-                    child.setText(1, f"{entry.title}（访问 {entry.visit_count} 次）")
+                    child.setText(1, trf('{0}（访问 {1} 次）', entry.title, entry.visit_count))
                 child.setToolTip(2, entry.url)
                 parent.addChild(child)
                 total += 1
         self.lbl_count.setText(
-            f"共 {total} 条记录" + ("（已筛选，高亮显示匹配内容）" if keyword.strip() else "")
+            trf('共 {0} 条记录', total) + (tr("（已筛选，高亮显示匹配内容）") if keyword.strip() else "")
         )
         self.tree.viewport().update()
 
@@ -418,7 +420,7 @@ class HistoryDialog(XPDialog):
         if not len(self.store):
             return
         answer = QMessageBox.question(
-            self, APP_NAME, "确定要清空全部历史记录吗？",
+            self, APP_NAME, tr("确定要清空全部历史记录吗？"),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         )
         if answer == QMessageBox.Yes:
@@ -436,5 +438,5 @@ class HistoryDialog(XPDialog):
         else:
             limit = time.time() - value * 86400
         removed = self.store.purge_before(limit)
-        QMessageBox.information(self, APP_NAME, f"已清除 {removed} 条历史记录。")
+        QMessageBox.information(self, APP_NAME, trf('已清除 {0} 条历史记录。', removed))
         self.reload()

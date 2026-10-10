@@ -17,6 +17,8 @@ from PySide6.QtCore import QObject, Signal
 
 from .crypto import DataVault
 
+from .i18n import tr, trf
+
 log = logging.getLogger(__name__)
 
 STATE_PENDING = "pending"
@@ -26,17 +28,17 @@ STATE_FAILED = "failed"
 STATE_CANCELED = "canceled"
 
 STATE_TEXT = {
-    STATE_PENDING: "等待中",
-    STATE_RUNNING: "正在下载",
-    STATE_DONE: "已完成",
-    STATE_FAILED: "失败",
-    STATE_CANCELED: "已取消",
+    STATE_PENDING: tr("等待中"),
+    STATE_RUNNING: tr("正在下载"),
+    STATE_DONE: tr("已完成"),
+    STATE_FAILED: tr("失败"),
+    STATE_CANCELED: tr("已取消"),
 }
 
 
 def human_size(size: float) -> str:
     if size is None or size < 0:
-        return "未知"
+        return tr("未知")
     units = ("B", "KB", "MB", "GB", "TB")
     value = float(size)
     for unit in units:
@@ -219,9 +221,9 @@ class DownloadManager(QObject):
             Path(folder).mkdir(parents=True, exist_ok=True)
             return folder
 
-        prompt = "请选择下载文件的保存目录："
+        prompt = tr("请选择下载文件的保存目录：")
         if first_time_hint and not folder:
-            prompt = "首次下载，请设定默认的下载保存目录："
+            prompt = tr("首次下载，请设定默认的下载保存目录：")
         chosen = self.folder_asker(prompt)
         if not chosen:
             return None
@@ -263,7 +265,7 @@ class DownloadManager(QObject):
     def finish(self, item: DownloadItem, ok: bool, error: str = "") -> None:
         item.finished_at = time.time()
         item.state = STATE_DONE if ok else STATE_FAILED
-        item.error = "" if ok else (error or "下载失败")
+        item.error = "" if ok else (error or tr("下载失败"))
         if ok and item.total:
             # 下载已成功：进度必须显示 100%，否则界面上会出现
             # "已完成 / 50%" 这类自相矛盾的状态

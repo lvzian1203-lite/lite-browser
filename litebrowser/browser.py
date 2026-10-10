@@ -48,6 +48,8 @@ from .history import HistoryStore
 from .managers import DownloadManagerDialog, HistoryDialog
 from .widgets import XPWindow
 
+from .i18n import tr, trf
+
 log = logging.getLogger(__name__)
 
 
@@ -84,7 +86,7 @@ class MainWindow(XPWindow):
         self.adblock = adblock
         self._popup_blocked_count = 0
         self._security_level = "ok"
-        self._security_text = "尚未打开网页"
+        self._security_text = tr("尚未打开网页")
         self.incognito = bool(config.get("incognito")) if vault is not None else False
 
         self._fullscreen = False
@@ -129,7 +131,7 @@ class MainWindow(XPWindow):
         self.menu_bar = QMenuBar(self.body)
         layout.addWidget(self.menu_bar)
 
-        self.toolbar = QToolBar("标准按钮", self.body)
+        self.toolbar = QToolBar(tr("标准按钮"), self.body)
         self.toolbar.setObjectName("mainToolBar")
         self.toolbar.setMovable(False)
         self.toolbar.setFloatable(False)
@@ -137,11 +139,11 @@ class MainWindow(XPWindow):
         self.toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         layout.addWidget(self.toolbar)
 
-        self.act_back = QAction(icons.icon("back", 22), "后退", self)
-        self.act_forward = QAction(icons.icon("forward", 22), "前进", self)
-        self.act_stop = QAction(icons.icon("stop", 22), "停止", self)
-        self.act_refresh = QAction(icons.icon("refresh", 22), "刷新", self)
-        self.act_home = QAction(icons.icon("home", 22), "主页", self)
+        self.act_back = QAction(icons.icon("back", 22), tr("后退"), self)
+        self.act_forward = QAction(icons.icon("forward", 22), tr("前进"), self)
+        self.act_stop = QAction(icons.icon("stop", 22), tr("停止"), self)
+        self.act_refresh = QAction(icons.icon("refresh", 22), tr("刷新"), self)
+        self.act_home = QAction(icons.icon("home", 22), tr("主页"), self)
         #: 导航按钮组：布局与图标随主题（各系统的真实做法）变化
         self._nav_actions = (
             self.act_back,
@@ -162,11 +164,11 @@ class MainWindow(XPWindow):
         self.address = QLineEdit(self.body)
         self.address.setMinimumWidth(220)
         self.address.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.address.setToolTip("输入网址，或输入关键字后按回车搜索")
+        self.address.setToolTip(tr("输入网址，或输入关键字后按回车搜索"))
         self.security_button = QToolButton(self.body)
         self.security_button.setAutoRaise(True)
         self.security_button.setIconSize(QSize(16, 16))
-        self.security_button.setToolTip("连接安全性")
+        self.security_button.setToolTip(tr("连接安全性"))
         self.security_button.clicked.connect(self.show_security_details)
         self.security_button.setIcon(icons.icon("lock", 16))
         security_wrap = QWidget(self.body)
@@ -178,14 +180,14 @@ class MainWindow(XPWindow):
         self.toolbar.addWidget(self.address)
         self.toolbar.addSeparator()
 
-        self.act_go = QAction(icons.icon("go", 22), "转到", self)
-        self.act_star = QAction(icons.icon("star_add", 22), "收藏", self)
-        self.act_bookmarks = QAction(icons.icon("bookmarks", 22), "收藏夹", self)
-        self.act_download = QAction(icons.icon("download", 22), "下载", self)
-        self.act_history = QAction(icons.icon("history", 22), "历史", self)
-        self.act_incognito = QAction(icons.icon("incognito", 22), "无痕", self)
+        self.act_go = QAction(icons.icon("go", 22), tr("转到"), self)
+        self.act_star = QAction(icons.icon("star_add", 22), tr("收藏"), self)
+        self.act_bookmarks = QAction(icons.icon("bookmarks", 22), tr("收藏夹"), self)
+        self.act_download = QAction(icons.icon("download", 22), tr("下载"), self)
+        self.act_history = QAction(icons.icon("history", 22), tr("历史"), self)
+        self.act_incognito = QAction(icons.icon("incognito", 22), tr("无痕"), self)
         self.act_incognito.setCheckable(True)
-        self.act_settings = QAction(icons.icon("settings", 22), "设置", self)
+        self.act_settings = QAction(icons.icon("settings", 22), tr("设置"), self)
         #: 其余工具栏按钮：图标同样跟随系统风格（Win10/鸿蒙/哈基米改为线描）
         self._tool_actions = (
             (self.act_go, "go"),
@@ -200,7 +202,7 @@ class MainWindow(XPWindow):
             action.setProperty("iconName", icon_name)
             self.toolbar.addAction(action)
 
-        self.bookmark_bar = QToolBar("书签栏", self.body)
+        self.bookmark_bar = QToolBar(tr("书签栏"), self.body)
         self.bookmark_bar.setObjectName("bookmarkBar")
         self.bookmark_bar.setMovable(False)
         self.bookmark_bar.setFloatable(False)
@@ -222,7 +224,7 @@ class MainWindow(XPWindow):
 
         self.btn_new_tab = QToolButton(self.tabs)
         self.btn_new_tab.setIcon(icons.icon("tab_new", 16))
-        self.btn_new_tab.setToolTip("新建标签页 (Ctrl+T)")
+        self.btn_new_tab.setToolTip(tr("新建标签页 (Ctrl+T)"))
         self.btn_new_tab.setAutoRaise(True)
         self.btn_new_tab.clicked.connect(lambda: self.new_tab())
         self.tabs.setCornerWidget(self.btn_new_tab, Qt.TopRightCorner)
@@ -231,7 +233,7 @@ class MainWindow(XPWindow):
         self.status = QStatusBar(self.body)
         self.status.setSizeGripEnabled(False)
 
-        self.lbl_status = QLabel("就绪")
+        self.lbl_status = QLabel(tr("就绪"))
         self.lbl_status.setMinimumWidth(120)
 
         self.progress = QProgressBar()
@@ -240,13 +242,13 @@ class MainWindow(XPWindow):
         self.progress.setRange(0, 100)
         self.progress.setVisible(False)
 
-        self.lbl_incognito = QLabel("无痕浏览")
+        self.lbl_incognito = QLabel(tr("无痕浏览"))
         self.lbl_incognito.setObjectName("incognitoBadge")
-        self.lbl_incognito.setToolTip("当前处于无痕浏览模式：不记录历史、Cookie 与缓存")
+        self.lbl_incognito.setToolTip(tr("当前处于无痕浏览模式：不记录历史、Cookie 与缓存"))
         self.lbl_incognito.setVisible(False)
 
         self.lbl_engine = QLabel("")
-        self.lbl_engine.setToolTip("当前渲染引擎")
+        self.lbl_engine.setToolTip(tr("当前渲染引擎"))
 
         self.lbl_zoom = QLabel("100%")
         self.lbl_zoom.setFixedWidth(46)
@@ -258,7 +260,7 @@ class MainWindow(XPWindow):
         self.btn_version.setText(f"v{APP_VERSION}")
         self.btn_version.setAutoRaise(True)
         self.btn_version.setCursor(Qt.PointingHandCursor)
-        self.btn_version.setToolTip(f"{APP_NAME} v{APP_VERSION}\n作者：{AUTHOR}\n点击查看「关于」")
+        self.btn_version.setToolTip(trf('{0} v{1}\n作者：{2}\n点击查看「关于」', APP_NAME, APP_VERSION, AUTHOR))
         self.btn_version.clicked.connect(self.show_about)
 
         # 状态栏内容放进一个容器：QStatusBar.addWidget 每次都会重新排版并 polish，
@@ -298,19 +300,19 @@ class MainWindow(XPWindow):
         row = QHBoxLayout(bar)
         row.setContentsMargins(6, 3, 6, 3)
         row.setSpacing(6)
-        row.addWidget(QLabel("查找："))
+        row.addWidget(QLabel(tr("查找：")))
         self.find_edit = QLineEdit(bar)
         self.find_edit.setFixedWidth(220)
         row.addWidget(self.find_edit)
         self.find_prev = QToolButton(bar)
-        self.find_prev.setText("上一个")
+        self.find_prev.setText(tr("上一个"))
         self.find_next = QToolButton(bar)
-        self.find_next.setText("下一个")
+        self.find_next.setText(tr("下一个"))
         self.find_result = QLabel("", bar)
         self.find_result.setMinimumWidth(90)
         self.find_close = QToolButton(bar)
         self.find_close.setIcon(icons.icon("close", 16))
-        self.find_close.setToolTip("关闭查找栏")
+        self.find_close.setToolTip(tr("关闭查找栏"))
         row.addWidget(self.find_prev)
         row.addWidget(self.find_next)
         row.addWidget(self.find_result)
@@ -330,28 +332,28 @@ class MainWindow(XPWindow):
     def _build_menus(self) -> None:
         bar = self.menu_bar
 
-        file_menu = bar.addMenu("文件(F)")
-        self.act_new_tab = QAction(icons.icon("tab_new", 16), "新建标签页(T)", self)
+        file_menu = bar.addMenu(tr("文件(F)"))
+        self.act_new_tab = QAction(icons.icon("tab_new", 16), tr("新建标签页(T)"), self)
         self.act_new_tab.setShortcut(QKeySequence("Ctrl+T"))
         self.act_new_tab.triggered.connect(lambda: self.new_tab())
-        self.act_close_tab = QAction(icons.icon("close", 16), "关闭标签页(C)", self)
+        self.act_close_tab = QAction(icons.icon("close", 16), tr("关闭标签页(C)"), self)
         self.act_close_tab.setShortcut(QKeySequence("Ctrl+W"))
         self.act_close_tab.triggered.connect(lambda: self.close_tab(self.tabs.currentIndex()))
-        self.act_save_as = QAction(icons.icon("save", 16), "页面另存为(A)...", self)
+        self.act_save_as = QAction(icons.icon("save", 16), tr("页面另存为(A)..."), self)
         self.act_save_as.setShortcut(QKeySequence("Ctrl+S"))
         self.act_save_as.triggered.connect(self.save_page_dialog)
-        self.act_save_mhtml = QAction(icons.icon("save", 16), "保存为 MHTML 单文件(M)...", self)
+        self.act_save_mhtml = QAction(icons.icon("save", 16), tr("保存为 MHTML 单文件(M)..."), self)
         self.act_save_mhtml.triggered.connect(lambda: self.save_page_as("mhtml"))
-        self.act_save_html = QAction(icons.icon("save", 16), "保存为完整网页(H)...", self)
+        self.act_save_html = QAction(icons.icon("save", 16), tr("保存为完整网页(H)..."), self)
         self.act_save_html.triggered.connect(lambda: self.save_page_as("html"))
-        self.act_save_html_only = QAction("保存为仅 HTML(S)...", self)
+        self.act_save_html_only = QAction(tr("保存为仅 HTML(S)..."), self)
         self.act_save_html_only.triggered.connect(lambda: self.save_page_as("html-only"))
-        self.act_print = QAction(icons.icon("print", 16), "打印(P)...", self)
+        self.act_print = QAction(icons.icon("print", 16), tr("打印(P)..."), self)
         self.act_print.setShortcut(QKeySequence("Ctrl+P"))
         self.act_print.triggered.connect(self.print_page)
-        self.act_pdf = QAction(icons.icon("print", 16), "导出为 PDF(D)...", self)
+        self.act_pdf = QAction(icons.icon("print", 16), tr("导出为 PDF(D)..."), self)
         self.act_pdf.triggered.connect(self.export_pdf)
-        self.act_quit = QAction(icons.icon("exit", 16), "退出(X)", self)
+        self.act_quit = QAction(icons.icon("exit", 16), tr("退出(X)"), self)
         self.act_quit.setShortcut(QKeySequence("Alt+F4"))
         self.act_quit.triggered.connect(self.close)
         for action in (
@@ -370,26 +372,26 @@ class MainWindow(XPWindow):
         ):
             file_menu.addAction(action) if action else file_menu.addSeparator()
 
-        edit_menu = bar.addMenu("编辑(E)")
-        self.act_undo = QAction("撤销(U)", self)
+        edit_menu = bar.addMenu(tr("编辑(E)"))
+        self.act_undo = QAction(tr("撤销(U)"), self)
         self.act_undo.setShortcut(QKeySequence("Ctrl+Z"))
         self.act_undo.triggered.connect(lambda: self._edit_action("undo"))
-        self.act_redo = QAction("重做(R)", self)
+        self.act_redo = QAction(tr("重做(R)"), self)
         self.act_redo.setShortcut(QKeySequence("Ctrl+Y"))
         self.act_redo.triggered.connect(lambda: self._edit_action("redo"))
-        self.act_cut = QAction("剪切(T)", self)
+        self.act_cut = QAction(tr("剪切(T)"), self)
         self.act_cut.setShortcut(QKeySequence("Ctrl+X"))
         self.act_cut.triggered.connect(lambda: self._edit_action("cut"))
-        self.act_copy = QAction("复制(C)", self)
+        self.act_copy = QAction(tr("复制(C)"), self)
         self.act_copy.setShortcut(QKeySequence("Ctrl+C"))
         self.act_copy.triggered.connect(lambda: self._edit_action("copy"))
-        self.act_paste = QAction("粘贴(P)", self)
+        self.act_paste = QAction(tr("粘贴(P)"), self)
         self.act_paste.setShortcut(QKeySequence("Ctrl+V"))
         self.act_paste.triggered.connect(lambda: self._edit_action("paste"))
-        self.act_select_all = QAction("全选(A)", self)
+        self.act_select_all = QAction(tr("全选(A)"), self)
         self.act_select_all.setShortcut(QKeySequence("Ctrl+A"))
         self.act_select_all.triggered.connect(lambda: self._edit_action("selectall"))
-        self.act_find = QAction(icons.icon("find", 16), "在此页上查找(F)", self)
+        self.act_find = QAction(icons.icon("find", 16), tr("在此页上查找(F)"), self)
         self.act_find.setShortcut(QKeySequence("Ctrl+F"))
         self.act_find.triggered.connect(self.show_find_bar)
         for action in (
@@ -405,34 +407,34 @@ class MainWindow(XPWindow):
         ):
             edit_menu.addAction(action) if action else edit_menu.addSeparator()
 
-        view_menu = bar.addMenu("查看(V)")
-        self.act_bookmark_bar = QAction("书签栏(B)", self, checkable=True)
+        view_menu = bar.addMenu(tr("查看(V)"))
+        self.act_bookmark_bar = QAction(tr("书签栏(B)"), self, checkable=True)
         self.act_bookmark_bar.setShortcut(QKeySequence("Ctrl+Shift+B"))
         self.act_bookmark_bar.toggled.connect(self._toggle_bookmark_bar)
-        self.act_status_bar = QAction("状态栏(S)", self, checkable=True)
+        self.act_status_bar = QAction(tr("状态栏(S)"), self, checkable=True)
         self.act_status_bar.toggled.connect(self._toggle_status_bar)
-        self.act_fullscreen = QAction(icons.icon("fullscreen", 16), "全屏显示(F)", self)
+        self.act_fullscreen = QAction(icons.icon("fullscreen", 16), tr("全屏显示(F)"), self)
         self.act_fullscreen.setShortcut(QKeySequence("F11"))
         self.act_fullscreen.triggered.connect(lambda: self.set_fullscreen(not self._fullscreen))
-        self.act_zoom_in = QAction(icons.icon("zoom_in", 16), "放大(I)", self)
+        self.act_zoom_in = QAction(icons.icon("zoom_in", 16), tr("放大(I)"), self)
         self.act_zoom_in.setShortcut(QKeySequence("Ctrl+="))
         self.act_zoom_in.triggered.connect(lambda: self.change_zoom(+10))
-        self.act_zoom_out = QAction(icons.icon("zoom_out", 16), "缩小(O)", self)
+        self.act_zoom_out = QAction(icons.icon("zoom_out", 16), tr("缩小(O)"), self)
         self.act_zoom_out.setShortcut(QKeySequence("Ctrl+-"))
         self.act_zoom_out.triggered.connect(lambda: self.change_zoom(-10))
-        self.act_zoom_reset = QAction("实际大小(R)", self)
+        self.act_zoom_reset = QAction(tr("实际大小(R)"), self)
         self.act_zoom_reset.setShortcut(QKeySequence("Ctrl+0"))
         self.act_zoom_reset.triggered.connect(lambda: self.set_zoom(1.0))
-        self.act_source = QAction("查看源代码(C)", self)
+        self.act_source = QAction(tr("查看源代码(C)"), self)
         self.act_source.setShortcut(QKeySequence("Ctrl+U"))
         self.act_source.triggered.connect(self.view_source)
-        self.act_devtools = QAction("开发者工具(D)", self)
+        self.act_devtools = QAction(tr("开发者工具(D)"), self)
         self.act_devtools.setShortcut(QKeySequence("F12"))
         self.act_devtools.triggered.connect(lambda: self._engine_call("open_dev_tools"))
-        self.act_dark_mode = QAction(icons.icon("incognito", 16), "深色模式(D)", self)
+        self.act_dark_mode = QAction(icons.icon("incognito", 16), tr("深色模式(D)"), self)
         self.act_dark_mode.setCheckable(True)
         self.act_dark_mode.setShortcut(QKeySequence("Ctrl+Shift+D"))
-        self.act_dark_mode.setToolTip("浅色 / 深色模式切换（会记住选择）")
+        self.act_dark_mode.setToolTip(tr("浅色 / 深色模式切换（会记住选择）"))
         self.act_dark_mode.toggled.connect(self.toggle_dark_mode)
         for action in (
             self.act_bookmark_bar,
@@ -451,52 +453,52 @@ class MainWindow(XPWindow):
         ):
             view_menu.addAction(action) if action else view_menu.addSeparator()
 
-        self.favorite_menu = bar.addMenu("收藏(A)")
-        self.act_add_favorite = QAction(icons.icon("star_add", 16), "添加到收藏夹(A)...", self)
+        self.favorite_menu = bar.addMenu(tr("收藏(A)"))
+        self.act_add_favorite = QAction(icons.icon("star_add", 16), tr("添加到收藏夹(A)..."), self)
         self.act_add_favorite.setShortcut(QKeySequence("Ctrl+D"))
         self.act_add_favorite.triggered.connect(self.add_current_bookmark)
-        self.act_manage_favorites = QAction(icons.icon("bookmarks", 16), "整理收藏夹(O)...", self)
+        self.act_manage_favorites = QAction(icons.icon("bookmarks", 16), tr("整理收藏夹(O)..."), self)
         self.act_manage_favorites.setShortcut(QKeySequence("Ctrl+Shift+O"))
         self.act_manage_favorites.triggered.connect(self.manage_bookmarks)
         self.favorite_menu.addAction(self.act_add_favorite)
         self.favorite_menu.addAction(self.act_manage_favorites)
         self.favorite_menu.addSeparator()
-        self._favorite_items_menu = self.favorite_menu.addMenu(icons.icon("star", 16), "收藏夹列表")
+        self._favorite_items_menu = self.favorite_menu.addMenu(icons.icon("star", 16), tr("收藏夹列表"))
 
-        tools_menu = bar.addMenu("工具(T)")
-        self.act_open_downloads = QAction(icons.icon("download", 16), "下载管理(J)...", self)
+        tools_menu = bar.addMenu(tr("工具(T)"))
+        self.act_open_downloads = QAction(icons.icon("download", 16), tr("下载管理(J)..."), self)
         self.act_open_downloads.setShortcut(QKeySequence("Ctrl+J"))
         self.act_open_downloads.triggered.connect(self.open_downloads)
-        self.act_open_history = QAction(icons.icon("history", 16), "历史记录(H)...", self)
+        self.act_open_history = QAction(icons.icon("history", 16), tr("历史记录(H)..."), self)
         self.act_open_history.setShortcut(QKeySequence("Ctrl+H"))
         self.act_open_history.triggered.connect(self.open_history)
-        self.act_toggle_incognito = QAction(icons.icon("incognito", 16), "无痕浏览模式(N)", self)
+        self.act_toggle_incognito = QAction(icons.icon("incognito", 16), tr("无痕浏览模式(N)"), self)
         self.act_toggle_incognito.setCheckable(True)
         self.act_toggle_incognito.setShortcut(QKeySequence("Ctrl+Shift+N"))
         self.act_toggle_incognito.toggled.connect(self._on_incognito_toggled)
-        self.act_export_plain = QAction("导出明文数据(E)...", self)
+        self.act_export_plain = QAction(tr("导出明文数据(E)..."), self)
         self.act_export_plain.triggered.connect(self.export_plain_dialog)
-        self.act_desktop_shortcut = QAction(icons.icon("app", 16), "创建桌面快捷方式(S)", self)
+        self.act_desktop_shortcut = QAction(icons.icon("app", 16), tr("创建桌面快捷方式(S)"), self)
         self.act_desktop_shortcut.triggered.connect(lambda: self.create_shortcut("desktop"))
-        self.act_startmenu_shortcut = QAction("创建开始菜单快捷方式(M)", self)
+        self.act_startmenu_shortcut = QAction(tr("创建开始菜单快捷方式(M)"), self)
         self.act_startmenu_shortcut.triggered.connect(lambda: self.create_shortcut("startmenu"))
         tools_menu.addAction(self.act_open_downloads)
         tools_menu.addAction(self.act_open_history)
-        self.act_open_data = QAction(icons.icon("settings", 16), "Cookie 与缓存管理(K)...", self)
+        self.act_open_data = QAction(icons.icon("settings", 16), tr("Cookie 与缓存管理(K)..."), self)
         self.act_open_data.setShortcut(QKeySequence("Ctrl+Shift+Del"))
         self.act_open_data.triggered.connect(self.open_data_manager)
         tools_menu.addAction(self.act_open_data)
         tools_menu.addSeparator()
-        self.act_mark_ad = QAction(icons.icon("warn", 16), "标记并屏蔽广告元素(M)", self)
+        self.act_mark_ad = QAction(icons.icon("warn", 16), tr("标记并屏蔽广告元素(M)"), self)
         self.act_mark_ad.setShortcut(QKeySequence("Ctrl+Shift+A"))
-        self.act_mark_ad.setToolTip("点一下网页上要屏蔽的广告（弹窗、横幅、浮层），以后打开同一网站自动隐藏")
+        self.act_mark_ad.setToolTip(tr("点一下网页上要屏蔽的广告（弹窗、横幅、浮层），以后打开同一网站自动隐藏"))
         self.act_mark_ad.triggered.connect(self.mark_ad_element)
-        self.act_ad_rules = QAction(icons.icon("settings", 16), "广告屏蔽规则(R)...", self)
+        self.act_ad_rules = QAction(icons.icon("settings", 16), tr("广告屏蔽规则(R)..."), self)
         self.act_ad_rules.triggered.connect(self.open_ad_rules)
-        self.act_flash_compat = QAction(icons.icon("globe", 16), "Flash 兼容（Ruffle，无广告）(F)", self)
+        self.act_flash_compat = QAction(icons.icon("globe", 16), tr("Flash 兼容（Ruffle，无广告）(F)"), self)
         self.act_flash_compat.setCheckable(True)
         self.act_flash_compat.setToolTip(
-            "用开源 Ruffle 模拟器运行 Flash 内容（4399 小游戏等），无广告、无需装 Flash 插件"
+            tr("用开源 Ruffle 模拟器运行 Flash 内容（4399 小游戏等），无广告、无需装 Flash 插件")
         )
         self.act_flash_compat.toggled.connect(self.toggle_flash_compat)
         tools_menu.addAction(self.act_mark_ad)
@@ -510,28 +512,28 @@ class MainWindow(XPWindow):
         tools_menu.addAction(self.act_desktop_shortcut)
         tools_menu.addAction(self.act_startmenu_shortcut)
 
-        settings_menu = bar.addMenu("设置(S)")
-        self.act_open_settings = QAction(icons.icon("settings", 16), "设置(O)...", self)
+        settings_menu = bar.addMenu(tr("设置(S)"))
+        self.act_open_settings = QAction(icons.icon("settings", 16), tr("设置(O)..."), self)
         self.act_open_settings.triggered.connect(self.open_settings)
-        self.act_about = QAction(icons.icon("info", 16), f"关于 {APP_NAME}(A)", self)
+        self.act_about = QAction(icons.icon("info", 16), trf('关于 {0}(A)', APP_NAME), self)
         self.act_about.triggered.connect(self.show_about)
         settings_menu.addAction(self.act_open_settings)
         settings_menu.addSeparator()
         settings_menu.addAction(self.act_about)
 
-        help_menu = bar.addMenu("帮助(H)")
-        self.act_guide = QAction(icons.icon("info", 16), "使用帮助(H)...", self)
+        help_menu = bar.addMenu(tr("帮助(H)"))
+        self.act_guide = QAction(icons.icon("info", 16), tr("使用帮助(H)..."), self)
         self.act_guide.setShortcut(QKeySequence("F1"))
         self.act_guide.triggered.connect(lambda: self.open_help("start"))
-        self.act_video_check = QAction(icons.icon("globe", 16), "视频播放自检(V)", self)
+        self.act_video_check = QAction(icons.icon("globe", 16), tr("视频播放自检(V)"), self)
         self.act_video_check.triggered.connect(self.open_video_check)
-        self.act_shortcuts = QAction(icons.icon("find", 16), "快捷键一览(K)...", self)
+        self.act_shortcuts = QAction(icons.icon("find", 16), tr("快捷键一览(K)..."), self)
         self.act_shortcuts.triggered.connect(lambda: self.open_help("shortcut"))
-        self.act_faq = QAction(icons.icon("warn", 16), "常见问题(Q)...", self)
+        self.act_faq = QAction(icons.icon("warn", 16), tr("常见问题(Q)..."), self)
         self.act_faq.triggered.connect(lambda: self.open_help("faq"))
-        self.act_feature_help = QAction(icons.icon("app", 16), "功能说明(F)...", self)
+        self.act_feature_help = QAction(icons.icon("app", 16), tr("功能说明(F)..."), self)
         self.act_feature_help.triggered.connect(lambda: self.open_help("theme"))
-        self.act_help = QAction(icons.icon("info", 16), f"关于 {APP_NAME}(A)", self)
+        self.act_help = QAction(icons.icon("info", 16), trf('关于 {0}(A)', APP_NAME), self)
         self.act_help.triggered.connect(self.show_about)
         for action in (
             self.act_guide,
@@ -640,8 +642,8 @@ class MainWindow(XPWindow):
         self, url: Optional[str] = None, *, switch: bool = True, autoload: bool = True
     ) -> BrowserEngine:
         engine = self._create_engine()
-        index = self.tabs.addTab(engine, icons.icon("globe", 16), "新标签页")
-        self.tabs.setTabToolTip(index, "新标签页")
+        index = self.tabs.addTab(engine, icons.icon("globe", 16), tr("新标签页"))
+        self.tabs.setTabToolTip(index, tr("新标签页"))
 
         if switch:
             self.tabs.setCurrentIndex(index)
@@ -652,7 +654,7 @@ class MainWindow(XPWindow):
             engine.load(self._swf_redirect(url, engine) or url)
         engine.set_zoom_factor(float(self.config.get("zoom") or 1.0))
         if not engine.is_ready():
-            self.lbl_status.setText("正在启动渲染引擎…")
+            self.lbl_status.setText(tr("正在启动渲染引擎…"))
             self.progress.setRange(0, 0)
             self.progress.setVisible(True)
         return engine
@@ -746,9 +748,9 @@ class MainWindow(XPWindow):
             return
         path, selected = QFileDialog.getSaveFileName(
             self,
-            "页面另存为",
+            tr("页面另存为"),
             self._suggest_filename(".mhtml"),
-            "MHTML 单文件 (*.mhtml);;完整网页 (*.htm *.html);;仅 HTML (*.html)",
+            tr("MHTML 单文件 (*.mhtml);;完整网页 (*.htm *.html);;仅 HTML (*.html)"),
         )
         if not path:
             return
@@ -756,7 +758,7 @@ class MainWindow(XPWindow):
             fmt = "mhtml"
             if not path.lower().endswith(".mhtml"):
                 path += ".mhtml"
-        elif "完整" in selected:
+        elif tr("完整") in selected:
             fmt = "html"
         else:
             fmt = "html-only"
@@ -768,12 +770,12 @@ class MainWindow(XPWindow):
             return
         suffix = ".mhtml" if fmt == "mhtml" else ".html"
         filters = {
-            "mhtml": "MHTML 单文件 (*.mhtml)",
-            "html": "完整网页 (*.htm *.html)",
-            "html-only": "仅 HTML (*.html)",
+            "mhtml": tr("MHTML 单文件 (*.mhtml)"),
+            "html": tr("完整网页 (*.htm *.html)"),
+            "html-only": tr("仅 HTML (*.html)"),
         }[fmt]
         path, _selected = QFileDialog.getSaveFileName(
-            self, "保存网页", self._suggest_filename(suffix), filters
+            self, tr("保存网页"), self._suggest_filename(suffix), filters
         )
         if not path:
             return
@@ -785,9 +787,9 @@ class MainWindow(XPWindow):
             return
         ok = engine.save_page_as(path, fmt)
         if ok:
-            QMessageBox.information(self, APP_NAME, f"已保存到：\n{path}")
+            QMessageBox.information(self, APP_NAME, trf('已保存到：\n{0}', path))
         else:
-            QMessageBox.warning(self, APP_NAME, "保存失败：当前内核不支持该操作。")
+            QMessageBox.warning(self, APP_NAME, tr("保存失败：当前内核不支持该操作。"))
 
     def print_page(self) -> None:
         engine = self.current_engine()
@@ -802,14 +804,14 @@ class MainWindow(XPWindow):
         path = Path(QDir.tempPath()) / f"lite-browser-print-{int(time.time())}.pdf"
         engine.export_pdf(str(path))
         QTimer.singleShot(1500, lambda: self._open_pdf(path))
-        self.lbl_status.setText("已生成打印预览 PDF，正在打开…")
+        self.lbl_status.setText(tr("已生成打印预览 PDF，正在打开…"))
 
     def export_pdf(self) -> None:
         engine = self.current_engine()
         if engine is None:
             return
         path, _selected = QFileDialog.getSaveFileName(
-            self, "导出为 PDF", self._suggest_filename(".pdf"), "PDF 文件 (*.pdf)"
+            self, tr("导出为 PDF"), self._suggest_filename(".pdf"), tr("PDF 文件 (*.pdf)")
         )
         if not path:
             return
@@ -817,10 +819,10 @@ class MainWindow(XPWindow):
             path += ".pdf"
         if engine.export_pdf(path):
             QTimer.singleShot(1500, lambda: QMessageBox.information(
-                self, APP_NAME, f"已导出 PDF：\n{path}"
+                self, APP_NAME, trf('已导出 PDF：\n{0}', path)
             ))
         else:
-            QMessageBox.warning(self, APP_NAME, "导出失败：当前内核不支持该操作。")
+            QMessageBox.warning(self, APP_NAME, tr("导出失败：当前内核不支持该操作。"))
 
     def _open_pdf(self, path: Path) -> None:
         import os
@@ -829,9 +831,9 @@ class MainWindow(XPWindow):
             if path.exists():
                 os.startfile(str(path))  # type: ignore[attr-defined]
             else:
-                QMessageBox.warning(self, APP_NAME, "生成 PDF 失败。")
+                QMessageBox.warning(self, APP_NAME, tr("生成 PDF 失败。"))
         except Exception:
-            QMessageBox.information(self, APP_NAME, f"PDF 已生成：\n{path}")
+            QMessageBox.information(self, APP_NAME, trf('PDF 已生成：\n{0}', path))
 
     # ------------------------------------------------------------------ #
     # 数据管理 / 安全
@@ -884,7 +886,7 @@ class MainWindow(XPWindow):
             answer = QMessageBox.question(
                 self,
                 APP_NAME,
-                f"快捷方式已存在：\n{shortcut_path(name, folder)}\n\n是否覆盖？",
+                trf('快捷方式已存在：\n{0}\n\n是否覆盖？', shortcut_path(name, folder)),
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
@@ -893,16 +895,16 @@ class MainWindow(XPWindow):
         ok, message = create_shortcut(
             name,
             folder=folder,
-            description=f"{APP_NAME} - {APP_VERSION}（作者 {AUTHOR}）",
+            description=trf('{0} - {1}（作者 {2}）', APP_NAME, APP_VERSION, AUTHOR),
         )
         if ok:
             QMessageBox.information(
                 self, APP_NAME,
-                ("已在桌面创建快捷方式：\n" if folder == "desktop" else "已在开始菜单创建快捷方式：\n")
+                (tr("已在桌面创建快捷方式：\n") if folder == "desktop" else tr("已在开始菜单创建快捷方式：\n"))
                 + message,
             )
         else:
-            QMessageBox.warning(self, APP_NAME, f"创建快捷方式失败：\n{message}")
+            QMessageBox.warning(self, APP_NAME, trf('创建快捷方式失败：\n{0}', message))
 
     def _update_security_indicator(self) -> None:
         from .netsec import security_icon
@@ -910,21 +912,21 @@ class MainWindow(XPWindow):
         engine = self.current_engine()
         url = engine.current_url() if engine is not None else ""
         if engine is not None and getattr(engine, "_blocked_url", ""):
-            level, text = "danger", "已拦截：该网址命中本地可疑规则"
+            level, text = "danger", tr("已拦截：该网址命中本地可疑规则")
         elif not url:
-            level, text = "ok", "尚未打开网页"
+            level, text = "ok", tr("尚未打开网页")
         elif url.lower().startswith("https://"):
             # 只说明传输层：TLS 加密 + 证书验证通过，不代表网站本身可信
-            level, text = "ok", "HTTPS 加密连接"
+            level, text = "ok", tr("HTTPS 加密连接")
         elif url.lower().startswith(("file://", "about:", "lite:", "data:", "view-source:")):
-            level, text = "ok", "本地页面"
+            level, text = "ok", tr("本地页面")
         else:
-            level, text = "warn", "HTTP 未加密连接"
+            level, text = "warn", tr("HTTP 未加密连接")
         self._security_level = level
         self._security_text = text
         try:
             self.security_button.setIcon(icons.icon(security_icon(level), 16))
-            self.security_button.setToolTip(f"{text}\n点击查看详细信息")
+            self.security_button.setToolTip(trf('{0}\n点击查看详细信息', text))
         except Exception as lite_exc:
             log.debug("忽略异常：%s", lite_exc)
             pass
@@ -943,25 +945,25 @@ class MainWindow(XPWindow):
             host = ""
         scheme = url.split(":")[0] if ":" in url else ""
         detail = (
-            f"连接状态：{getattr(self, '_security_text', '未知')}\n"
-            f"地址：{url or '（无）'}\n"
-            f"主机：{host or '（无）'}\n"
-            f"协议：{scheme or '（无）'}\n"
+            f"连接状态：{getattr(self, '_security_text', tr('未知'))}\n"
+            f"地址：{url or tr('（无）')}\n"
+            f"主机：{host or tr('（无）')}\n"
+            f"协议：{scheme or tr('（无）')}\n"
         )
         if scheme == "https":
             # 只描述传输层：加密 + 证书校验通过，不能据此判断网站是否可信
-            detail += "传输加密：TLS 加密，证书校验由内核完成（仅代表传输层安全）\n"
+            detail += tr("传输加密：TLS 加密，证书校验由内核完成（仅代表传输层安全）\n")
         elif scheme == "http":
-            detail += "传输加密：无（内容可能在传输过程中被窃取或篡改）\n"
-        detail += f"\n当前内核：{self.engine_id}"
+            detail += tr("传输加密：无（内容可能在传输过程中被窃取或篡改）\n")
+        detail += trf('\n当前内核：{0}', self.engine_id)
 
         dialog = QMessageBox(self)
-        dialog.setWindowTitle("连接安全性")
+        dialog.setWindowTitle(tr("连接安全性"))
         dialog.setIcon(QMessageBox.Information)
-        dialog.setText("连接安全性详细信息")
+        dialog.setText(tr("连接安全性详细信息"))
         dialog.setInformativeText(detail)
-        btn_cookie = dialog.addButton("管理 Cookie 与缓存", QMessageBox.ActionRole)
-        dialog.addButton("关闭", QMessageBox.AcceptRole)
+        btn_cookie = dialog.addButton(tr("管理 Cookie 与缓存"), QMessageBox.ActionRole)
+        dialog.addButton(tr("关闭"), QMessageBox.AcceptRole)
         dialog.exec()
         if dialog.clickedButton() is btn_cookie:
             CookieManagerDialog(self.current_engine, self, performance=self.performance).exec()
@@ -991,13 +993,13 @@ class MainWindow(XPWindow):
     def _on_error_page(self, engine: BrowserEngine, url: str, code: int) -> None:
         tab_index = self.tabs.indexOf(engine)
         if code == -100:
-            message = "已暂停打开该网址（命中本地可疑规则）"
-            title = "可疑网址"
+            message = tr("已暂停打开该网址（命中本地可疑规则）")
+            title = tr("可疑网址")
         else:
             from .errors import friendly
 
-            message = friendly(code) if code else "无法打开该页面"
-            title = "无法访问此页面"
+            message = friendly(code) if code else tr("无法打开该页面")
+            title = tr("无法访问此页面")
         if tab_index >= 0:
             self.tabs.setTabText(tab_index, title)
             self.tabs.setTabToolTip(tab_index, f"{message}\n{url}")
@@ -1039,19 +1041,18 @@ class MainWindow(XPWindow):
 
         selector, host = parse_pick_command(command)
         if not selector:
-            self.lbl_status.setText("未能生成选择器，广告标记已取消")
+            self.lbl_status.setText(tr("未能生成选择器，广告标记已取消"))
             return
         page_url = engine.current_url() or host
         rule = self.adblock.add(page_url or host, selector)
         if rule is None:
-            self.lbl_status.setText("广告标记失败：网页地址无效")
+            self.lbl_status.setText(tr("广告标记失败：网页地址无效"))
             return
         engine.set_adblock(self.adblock.selectors_for(page_url), block_popups=self.adblock.block_popups)
-        self.lbl_status.setText(f"✓ 已屏蔽该元素（规则已保存到 {rule.domain}）")
+        self.lbl_status.setText(trf('✓ 已屏蔽该元素（规则已保存到 {0}）', rule.domain))
         self._notify(
-            "已加入屏蔽规则",
-            f"一只路过的哈基米 🐱 帮你记住了这个广告元素：\n{selector}\n"
-            f"以后打开 {rule.domain} 会自动隐藏它，喵喵。",
+            tr("已加入屏蔽规则"),
+            trf('一只路过的哈基米 🐱 帮你记住了这个广告元素：\n{0}\n以后打开 {1} 会自动隐藏它，喵喵。', selector, rule.domain),
             icon="cat",
         )
 
@@ -1064,7 +1065,7 @@ class MainWindow(XPWindow):
             engine.start_ad_picker()
         except Exception:
             return
-        self.lbl_status.setText("广告标记模式：点一下要屏蔽的广告，按 Esc 取消")
+        self.lbl_status.setText(tr("广告标记模式：点一下要屏蔽的广告，按 Esc 取消"))
 
     def open_ad_rules(self) -> None:
         """打开广告屏蔽规则管理。"""
@@ -1093,7 +1094,7 @@ class MainWindow(XPWindow):
         short = (url or "").split("?")[0][:60]
         suffix = f"：{short}" if short else ""
         self.lbl_status.setText(
-            f"已拦截网页自动弹窗{suffix}（本次已拦 {self._popup_blocked_count} 个）"
+            trf('已拦截网页自动弹窗{0}（本次已拦 {1} 个）', suffix, self._popup_blocked_count)
         )
 
     # ------------------------------------------------------------------ #
@@ -1124,11 +1125,11 @@ class MainWindow(XPWindow):
         self._apply_ruffle_to_all()
         if enabled:
             if not self.current_engine().capabilities.ruffle:
-                self.lbl_status.setText("Flash 兼容需要 Edge WebView2 内核（当前是 QtWebEngine）")
+                self.lbl_status.setText(tr("Flash 兼容需要 Edge WebView2 内核（当前是 QtWebEngine）"))
             else:
-                self.lbl_status.setText("已开启 Flash 兼容（Ruffle，无广告），刷新页面生效")
+                self.lbl_status.setText(tr("已开启 Flash 兼容（Ruffle，无广告），刷新页面生效"))
         else:
-            self.lbl_status.setText("已关闭 Flash 兼容")
+            self.lbl_status.setText(tr("已关闭 Flash 兼容"))
         if hasattr(self, "act_flash_compat"):
             self.act_flash_compat.blockSignals(True)
             self.act_flash_compat.setChecked(bool(enabled))
@@ -1209,7 +1210,7 @@ class MainWindow(XPWindow):
                 self.new_tab(saved[0])
                 for url in saved[1:]:
                     engine = self.new_tab(url, switch=False, autoload=False)
-                    self.tabs.setTabText(self.tabs.indexOf(engine), "待加载")
+                    self.tabs.setTabText(self.tabs.indexOf(engine), tr("待加载"))
                     engine._pending_url = url
                 return
         self.new_tab(self._startup_url())
@@ -1288,7 +1289,7 @@ class MainWindow(XPWindow):
             self.progress.setRange(0, 100)
             self.progress.setValue(0)
             self.progress.setVisible(True)
-            self.lbl_status.setText("正在打开网页...")
+            self.lbl_status.setText(tr("正在打开网页..."))
 
     def _on_load_progress(self, engine: BrowserEngine, value: int) -> None:
         if engine is self.current_engine():
@@ -1298,7 +1299,7 @@ class MainWindow(XPWindow):
         if engine is self.current_engine():
             self.progress.setRange(0, 100)
             self.progress.setVisible(False)
-            self.lbl_status.setText("完成" if ok else "无法打开该网页")
+            self.lbl_status.setText(tr("完成") if ok else tr("无法打开该网页"))
             self._update_navigation(engine)
         if ok:
             self._record_history(engine)
@@ -1321,14 +1322,14 @@ class MainWindow(XPWindow):
     def _on_title_changed(self, engine: BrowserEngine, title: str) -> None:
         index = self.tabs.indexOf(engine)
         if index >= 0:
-            text = title or engine.current_url() or "新标签页"
+            text = title or engine.current_url() or tr("新标签页")
             self.tabs.setTabText(index, text[:28])
             self.tabs.setTabToolTip(index, title or "")
         if engine is self.current_engine():
             self._update_title(engine)
 
     def _update_title(self, engine: BrowserEngine) -> None:
-        title = engine.current_title() or engine.current_url() or "新标签页"
+        title = engine.current_title() or engine.current_url() or tr("新标签页")
         self.setWindowTitle(f"{title} - {APP_NAME}" if title else APP_NAME)
 
     @staticmethod
@@ -1379,7 +1380,7 @@ class MainWindow(XPWindow):
 
     def _on_status_message(self, engine: BrowserEngine, text: str) -> None:
         if engine is self.current_engine():
-            self.lbl_status.setText(text or "完成")
+            self.lbl_status.setText(text or tr("完成"))
 
     def _on_new_window_requested(self, url: str) -> None:
         self.new_tab(url)
@@ -1396,18 +1397,18 @@ class MainWindow(XPWindow):
             self.bookmark_bar.addAction(action)
 
         self.bookmark_bar.addSeparator()
-        add_action = QAction(icons.icon("star_add", 16), "添加...", self)
+        add_action = QAction(icons.icon("star_add", 16), tr("添加..."), self)
         add_action.triggered.connect(self.add_current_bookmark)
         self.bookmark_bar.addAction(add_action)
 
-        manage_action = QAction(icons.icon("bookmarks", 16), "整理...", self)
+        manage_action = QAction(icons.icon("bookmarks", 16), tr("整理..."), self)
         manage_action.triggered.connect(self.manage_bookmarks)
         self.bookmark_bar.addAction(manage_action)
 
         self._favorite_items_menu.clear()
         items = self.bookmarks.items()
         if not items:
-            empty = self._favorite_items_menu.addAction("（暂无书签）")
+            empty = self._favorite_items_menu.addAction(tr("（暂无书签）"))
             empty.setEnabled(False)
             return
         for item in items[:30]:
@@ -1421,7 +1422,7 @@ class MainWindow(XPWindow):
             return
         url = engine.current_url()
         if not url or url == "about:blank":
-            QMessageBox.information(self, APP_NAME, "当前页面没有可以收藏的地址。")
+            QMessageBox.information(self, APP_NAME, tr("当前页面没有可以收藏的地址。"))
             return
         title = engine.current_title() or url
         existing = self.bookmarks.index_of(url)
@@ -1429,7 +1430,7 @@ class MainWindow(XPWindow):
             answer = QMessageBox.question(
                 self,
                 APP_NAME,
-                f"“{title}”已经在收藏夹中，是否更新它的名称？",
+                trf('“{0}”已经在收藏夹中，是否更新它的名称？', title),
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.Yes,
             )
@@ -1485,8 +1486,8 @@ class MainWindow(XPWindow):
     def _on_download_completed(self, filename: str, folder: str) -> None:
         """下载完成提示：一只路过的哈基米帮你把文件放好了。"""
         self._notify(
-            "下载完成",
-            f"一只路过的哈基米 🐱 帮你将「{filename}」放在了：\n{folder}\n喵喵。",
+            tr("下载完成"),
+            trf('一只路过的哈基米 🐱 帮你将「{0}」放在了：\n{1}\n喵喵。', filename, folder),
             icon="cat",
             on_click=lambda: self._open_path(folder),
         )
@@ -1557,10 +1558,10 @@ class MainWindow(XPWindow):
         answer = QMessageBox.question(
             self,
             APP_NAME,
-            ("开启无痕浏览模式后，浏览历史不会被记录，Cookie 与缓存只保存在内存中。\n"
-             "切换模式会关闭当前所有标签页并重新打开，是否继续？")
+            (tr("开启无痕浏览模式后，浏览历史不会被记录，Cookie 与缓存只保存在内存中。\n"
+             "切换模式会关闭当前所有标签页并重新打开，是否继续？"))
             if enabled
-            else "关闭无痕浏览模式后将恢复记录浏览历史，切换模式会重新打开标签页，是否继续？",
+            else tr("关闭无痕浏览模式后将恢复记录浏览历史，切换模式会重新打开标签页，是否继续？"),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -1580,7 +1581,7 @@ class MainWindow(XPWindow):
             action.blockSignals(False)
         self.lbl_incognito.setVisible(self.incognito)
         self.act_incognito.setToolTip(
-            "当前处于无痕浏览模式" if self.incognito else "点击切换到无痕浏览模式"
+            tr("当前处于无痕浏览模式") if self.incognito else tr("点击切换到无痕浏览模式")
         )
         if self.downloads is not None:
             # 无痕模式下不把下载记录写入磁盘
@@ -1601,11 +1602,11 @@ class MainWindow(XPWindow):
     def export_plain_dialog(self) -> None:
         if self.vault is None:
             return
-        folder = QFileDialog.getExistingDirectory(self, "导出明文数据到", str(Path.home()))
+        folder = QFileDialog.getExistingDirectory(self, tr("导出明文数据到"), str(Path.home()))
         if not folder:
             return
         count = self.export_plain_data(Path(folder))
-        QMessageBox.information(self, APP_NAME, f"已导出 {count} 个文件到：\n{folder}")
+        QMessageBox.information(self, APP_NAME, trf('已导出 {0} 个文件到：\n{1}', count, folder))
 
     def export_plain_data(self, folder: Path) -> int:
         """把加密的数据文件解密后导出为明文 JSON。"""
@@ -1659,7 +1660,7 @@ class MainWindow(XPWindow):
             return
         self.config.set("ui_mode", mode)
         self.apply_theme_from_config()
-        self.lbl_status.setText("已切换到深色模式" if enabled else "已切换到浅色模式")
+        self.lbl_status.setText(tr("已切换到深色模式") if enabled else tr("已切换到浅色模式"))
 
     def apply_theme_from_config(self) -> None:
         """按当前配置重新生成并应用主题（不动配置）。"""
@@ -1874,7 +1875,7 @@ class MainWindow(XPWindow):
             self.set_window_chrome_visible(False)
             self.sc_escape.setEnabled(True)
             self.showFullScreen()
-            self.lbl_status.setText("按 F11 或 Esc 退出全屏")
+            self.lbl_status.setText(tr("按 F11 或 Esc 退出全屏"))
         else:
             self.menu_bar.setVisible(True)
             self.toolbar.setVisible(True)
@@ -1953,11 +1954,11 @@ class MainWindow(XPWindow):
         if not self.find_bar.isVisible():
             return
         if matches <= 0:
-            self.find_result.setText("找不到匹配项")
+            self.find_result.setText(tr("找不到匹配项"))
         elif active:
-            self.find_result.setText(f"第 {active + 1} / {matches} 个")
+            self.find_result.setText(trf('第 {0} / {1} 个', active + 1, matches))
         else:
-            self.find_result.setText(f"共 {matches} 个匹配")
+            self.find_result.setText(trf('共 {0} 个匹配', matches))
 
     # ------------------------------------------------------------------ #
     # 其它

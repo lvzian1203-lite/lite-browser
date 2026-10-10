@@ -17,6 +17,8 @@ from pathlib import Path
 
 from .config import APP_NAME, APP_VERSION, data_dir
 
+from .i18n import tr, trf, tr_html
+
 #: 测试视频（公开可用的 H.264 样例）
 TEST_VIDEO = "https://www.w3schools.com/html/mov_bbb.mp4"
 
@@ -78,7 +80,7 @@ def build_page(engine_id: str = "", engine_label: str = "", browser_version: str
         level, "需要确认"
     )
 
-    return f"""<!doctype html>
+    return tr_html(f"""<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -113,8 +115,8 @@ def build_page(engine_id: str = "", engine_label: str = "", browser_version: str
 
 <div class="card">
   <table>
-    <tr><td>渲染引擎</td><td id="engine">{_html.escape(engine_label or engine_id or '未知')}</td></tr>
-    <tr><td>内核版本</td><td id="ver">{_html.escape(browser_version or '（未报告）')}</td></tr>
+    <tr><td>渲染引擎</td><td id="engine">{_html.escape(engine_label or engine_id or tr('未知'))}</td></tr>
+    <tr><td>内核版本</td><td id="ver">{_html.escape(browser_version or tr('（未报告）'))}</td></tr>
     <tr><td>User-Agent</td><td id="ua">读取中…</td></tr>
     <tr><td>H.264（video/mp4; avc1）</td><td id="h264">检测中…</td></tr>
     <tr><td>AAC（audio/mp4; mp4a）</td><td id="aac">检测中…</td></tr>
@@ -197,7 +199,7 @@ function mark(id, value) {{
 </script>
 </body>
 </html>
-"""
+""")
 
 
 def write_page(engine_id: str = "", engine_label: str = "", browser_version: str = "",

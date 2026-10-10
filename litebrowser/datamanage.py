@@ -32,17 +32,19 @@ from .netsec import CertificateInfo
 from .performance import PerformanceManager, format_size
 from .widgets import XPDialog
 
+from .i18n import tr, trf
+
 
 def _expiry_text(item: dict) -> str:
     if item.get("session"):
-        return "会话结束时"
+        return tr("会话结束时")
     expires = item.get("expires")
     try:
         expires = float(expires)
     except (TypeError, ValueError):
-        return "未知"
+        return tr("未知")
     if expires <= 0:
-        return "会话结束时"
+        return tr("会话结束时")
     return time.strftime("%Y-%m-%d %H:%M", time.localtime(expires))
 
 
@@ -56,7 +58,7 @@ class CookieManagerDialog(XPDialog):
         *,
         performance: Optional[PerformanceManager] = None,
     ) -> None:
-        super().__init__(parent, title="Cookie 与缓存管理", icon_name="settings")
+        super().__init__(parent, title=tr("Cookie 与缓存管理"), icon_name="settings")
         self.engine_provider = engine_provider
         self.performance = performance
         self._cookies: list[dict] = []
@@ -68,12 +70,12 @@ class CookieManagerDialog(XPDialog):
 
         self.tabs = QTabWidget(self)
         self.tabs.addTab(self._build_cookies(), "Cookie")
-        self.tabs.addTab(self._build_storage(), "缓存与站点数据")
+        self.tabs.addTab(self._build_storage(), tr("缓存与站点数据"))
         layout.addWidget(self.tabs, 1)
 
         row = QHBoxLayout()
         row.addStretch(1)
-        close = QPushButton("关闭")
+        close = QPushButton(tr("关闭"))
         close.clicked.connect(self.accept)
         row.addWidget(close)
         layout.addLayout(row)
@@ -90,26 +92,26 @@ class CookieManagerDialog(XPDialog):
         layout.setSpacing(8)
 
         tip = QLabel(
-            "这里列出当前内核保存的全部 Cookie。删除后立即生效，"
-            "已登录的网站可能需要重新登录。"
+            tr("这里列出当前内核保存的全部 Cookie。删除后立即生效，"
+            "已登录的网站可能需要重新登录。")
         )
         tip.setWordWrap(True)
         layout.addWidget(tip)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("筛选："))
+        row.addWidget(QLabel(tr("筛选：")))
         self.filter_edit = QLineEdit()
-        self.filter_edit.setPlaceholderText("输入域名或名称关键字")
+        self.filter_edit.setPlaceholderText(tr("输入域名或名称关键字"))
         self.filter_edit.textChanged.connect(self._apply_filter)
         row.addWidget(self.filter_edit, 1)
-        refresh = QPushButton("刷新")
+        refresh = QPushButton(tr("刷新"))
         refresh.clicked.connect(self.reload_cookies)
         row.addWidget(refresh)
         layout.addLayout(row)
 
         self.cookie_tree = QTreeWidget(page)
         self.cookie_tree.setColumnCount(5)
-        self.cookie_tree.setHeaderLabels(["域名", "名称", "路径", "安全", "过期时间"])
+        self.cookie_tree.setHeaderLabels([tr("域名"), tr("名称"), tr("路径"), tr("安全"), tr("过期时间")])
         self.cookie_tree.setRootIsDecorated(False)
         self.cookie_tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.cookie_tree.setUniformRowHeights(True)
@@ -127,15 +129,15 @@ class CookieManagerDialog(XPDialog):
 
         buttons = QHBoxLayout()
         for text, slot in (
-            ("删除所选(&D)", self.delete_selected),
-            ("删除全部(&A)", self.delete_all),
-            ("删除会话 Cookie(&S)", self.delete_session),
+            (tr("删除所选(&D)"), self.delete_selected),
+            (tr("删除全部(&A)"), self.delete_all),
+            (tr("删除会话 Cookie(&S)"), self.delete_session),
         ):
             button = QPushButton(text)
             button.clicked.connect(slot)
             buttons.addWidget(button)
         buttons.addStretch(1)
-        self.cookie_count = QLabel("共 0 条")
+        self.cookie_count = QLabel(tr("共 0 条"))
         buttons.addWidget(self.cookie_count)
         layout.addLayout(buttons)
         return page
@@ -143,9 +145,9 @@ class CookieManagerDialog(XPDialog):
     def reload_cookies(self) -> None:
         engine = self.engine_provider() if self.engine_provider else None
         if engine is None:
-            self.cookie_count.setText("没有可用的标签页")
+            self.cookie_count.setText(tr("没有可用的标签页"))
             return
-        self.cookie_count.setText("正在读取…")
+        self.cookie_count.setText(tr("正在读取…"))
         engine.list_cookies(self._on_cookies)
 
     def _on_cookies(self, cookies: list) -> None:
@@ -166,7 +168,7 @@ class CookieManagerDialog(XPDialog):
                     domain,
                     name,
                     str(item.get("path") or "/"),
-                    "是" if item.get("secure") else "",
+                    tr("是") if item.get("secure") else "",
                     _expiry_text(item),
                 ]
             )
@@ -175,7 +177,7 @@ class CookieManagerDialog(XPDialog):
                 node.setForeground(4, Qt.gray)
             self.cookie_tree.addTopLevelItem(node)
             shown += 1
-        self.cookie_count.setText(f"共 {shown} / {len(self._cookies)} 条")
+        self.cookie_count.setText(trf('共 {0} / {1} 条', shown, len(self._cookies)))
 
     def _selected(self) -> list[dict]:
         result = []
@@ -191,10 +193,10 @@ class CookieManagerDialog(XPDialog):
             return
         selected = self._selected()
         if not selected:
-            QMessageBox.information(self, APP_NAME, "请先选择要删除的 Cookie。")
+            QMessageBox.information(self, APP_NAME, tr("请先选择要删除的 Cookie。"))
             return
         if QMessageBox.question(
-            self, APP_NAME, f"确定删除选中的 {len(selected)} 条 Cookie 吗？",
+            self, APP_NAME, trf('确定删除选中的 {0} 条 Cookie 吗？', len(selected)),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         ) != QMessageBox.Yes:
             return
@@ -207,7 +209,7 @@ class CookieManagerDialog(XPDialog):
         if engine is None:
             return
         if QMessageBox.question(
-            self, APP_NAME, "确定删除全部 Cookie 吗？所有网站的登录状态都会失效。",
+            self, APP_NAME, tr("确定删除全部 Cookie 吗？所有网站的登录状态都会失效。"),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         ) != QMessageBox.Yes:
             return
@@ -230,33 +232,33 @@ class CookieManagerDialog(XPDialog):
         layout.setContentsMargins(10, 10, 10, 8)
         layout.setSpacing(10)
 
-        self.storage_info = QLabel("正在统计…")
+        self.storage_info = QLabel(tr("正在统计…"))
         self.storage_info.setWordWrap(True)
         layout.addWidget(self.storage_info)
 
-        self.suspend_check = QCheckBox("后台标签页闲置后自动挂起（释放内存占用）")
+        self.suspend_check = QCheckBox(tr("后台标签页闲置后自动挂起（释放内存占用）"))
         layout.addWidget(self.suspend_check)
 
         row = QHBoxLayout()
-        clear_cache = QPushButton("清除缓存(&C)")
+        clear_cache = QPushButton(tr("清除缓存(&C)"))
         clear_cache.clicked.connect(self.clear_cache)
         row.addWidget(clear_cache)
-        clear_site = QPushButton("清除站点数据(&L)")
-        clear_site.setToolTip("清理 localStorage、IndexedDB 等站点存储")
+        clear_site = QPushButton(tr("清除站点数据(&L)"))
+        clear_site.setToolTip(tr("清理 localStorage、IndexedDB 等站点存储"))
         clear_site.clicked.connect(self.clear_site_data)
         row.addWidget(clear_site)
-        clear_all = QPushButton("清除全部浏览数据(&A)")
+        clear_all = QPushButton(tr("清除全部浏览数据(&A)"))
         clear_all.clicked.connect(self.clear_everything)
         row.addWidget(clear_all)
-        refresh = QPushButton("重新统计")
+        refresh = QPushButton(tr("重新统计"))
         refresh.clicked.connect(self.refresh_storage)
         row.addWidget(refresh)
         row.addStretch(1)
         layout.addLayout(row)
 
         note = QLabel(
-            "说明：缓存用于加速网页加载，清除后首次访问网站会稍慢；"
-            "站点数据包含网页的本地存储与离线数据，清除可能导致网站设置丢失。"
+            tr("说明：缓存用于加速网页加载，清除后首次访问网站会稍慢；"
+            "站点数据包含网页的本地存储与离线数据，清除可能导致网站设置丢失。")
         )
         note.setWordWrap(True)
         note.setProperty("role", "hint")
@@ -279,7 +281,7 @@ class CookieManagerDialog(XPDialog):
 
     def refresh_storage(self) -> None:
         if self.performance is None:
-            self.storage_info.setText("无法统计缓存占用。")
+            self.storage_info.setText(tr("无法统计缓存占用。"))
             return
         stats = self.performance.stats()
         text = (
@@ -293,10 +295,10 @@ class CookieManagerDialog(XPDialog):
     def clear_cache(self) -> None:
         engine = self.engine_provider() if self.engine_provider else None
         if engine is None:
-            QMessageBox.information(self, APP_NAME, "请先打开一个标签页。")
+            QMessageBox.information(self, APP_NAME, tr("请先打开一个标签页。"))
             return
         engine.clear_cache()
-        QMessageBox.information(self, APP_NAME, "已清除缓存。")
+        QMessageBox.information(self, APP_NAME, tr("已清除缓存。"))
         self.refresh_storage()
 
     def clear_site_data(self) -> None:
@@ -304,12 +306,12 @@ class CookieManagerDialog(XPDialog):
         if engine is None:
             return
         if QMessageBox.question(
-            self, APP_NAME, "确定清除站点数据（localStorage / IndexedDB 等）吗？",
+            self, APP_NAME, tr("确定清除站点数据（localStorage / IndexedDB 等）吗？"),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         ) != QMessageBox.Yes:
             return
         engine.clear_site_data()
-        QMessageBox.information(self, APP_NAME, "已清除站点数据。")
+        QMessageBox.information(self, APP_NAME, tr("已清除站点数据。"))
         self.refresh_storage()
 
     def clear_everything(self) -> None:
@@ -318,15 +320,15 @@ class CookieManagerDialog(XPDialog):
             return
         if QMessageBox.question(
             self, APP_NAME,
-            "确定清除全部浏览数据吗？\n\n包括：Cookie、缓存、站点数据。\n"
-            "书签、历史记录与下载记录不会被删除。",
+            tr("确定清除全部浏览数据吗？\n\n包括：Cookie、缓存、站点数据。\n"
+            "书签、历史记录与下载记录不会被删除。"),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         ) != QMessageBox.Yes:
             return
         engine.clear_cache()
         engine.delete_all_cookies()
         engine.clear_site_data()
-        QMessageBox.information(self, APP_NAME, "已清除全部浏览数据。")
+        QMessageBox.information(self, APP_NAME, tr("已清除全部浏览数据。"))
         self.reload_cookies()
         self.refresh_storage()
 
@@ -335,7 +337,7 @@ class CertificateDialog(XPDialog):
     """HTTPS 证书问题提示。"""
 
     def __init__(self, info: CertificateInfo, parent: QWidget | None = None) -> None:
-        super().__init__(parent, title="证书错误", icon_name="warn")
+        super().__init__(parent, title=tr("证书错误"), icon_name="warn")
         self.info = info
         self.allowed = False
         self.setMinimumWidth(520)
@@ -344,7 +346,7 @@ class CertificateDialog(XPDialog):
         layout.setContentsMargins(16, 14, 16, 12)
         layout.setSpacing(10)
 
-        headline = QLabel("此网站的安全证书有问题")
+        headline = QLabel(tr("此网站的安全证书有问题"))
         font = headline.font()
         font.setBold(True)
         font.setPointSizeF(11.0)
@@ -353,16 +355,16 @@ class CertificateDialog(XPDialog):
         layout.addWidget(headline)
 
         warn = QLabel(
-            "证书用于确认网站身份并加密通信。继续访问可能使您的信息被窃取或篡改。"
+            tr("证书用于确认网站身份并加密通信。继续访问可能使您的信息被窃取或篡改。")
         )
         warn.setWordWrap(True)
         layout.addWidget(warn)
 
         detail = QLabel(
-            f"<b>访问的网站：</b>{info.host or '未知'}<br>"
-            f"<b>问题：</b>{info.error or '证书不受信任'}<br>"
-            f"<b>颁发给：</b>{info.subject or '未知'}<br>"
-            f"<b>颁发者：</b>{info.issuer or '未知'}<br>"
+            f"<b>访问的网站：</b>{info.host or tr('未知')}<br>"
+            f"<b>问题：</b>{info.error or tr('证书不受信任')}<br>"
+            f"<b>颁发给：</b>{info.subject or tr('未知')}<br>"
+            f"<b>颁发者：</b>{info.issuer or tr('未知')}<br>"
             f"<b>有效期：</b>{info.valid_from or '?'} 至 {info.valid_to or '?'}"
         )
         detail.setWordWrap(True)
@@ -371,12 +373,12 @@ class CertificateDialog(XPDialog):
         layout.addWidget(detail)
 
         row = QHBoxLayout()
-        back = QPushButton("返回安全页面(&B)")
+        back = QPushButton(tr("返回安全页面(&B)"))
         back.setDefault(True)
         back.clicked.connect(self.reject)
         row.addWidget(back)
         row.addStretch(1)
-        proceed = QPushButton("继续访问（不推荐）(&P)")
+        proceed = QPushButton(tr("继续访问（不推荐）(&P)"))
         proceed.clicked.connect(self._proceed)
         row.addWidget(proceed)
         layout.addLayout(row)
@@ -384,8 +386,8 @@ class CertificateDialog(XPDialog):
     def _proceed(self) -> None:
         if QMessageBox.warning(
             self, APP_NAME,
-            "确定要继续访问吗？\n\n继续访问会让本次连接失去证书保护，"
-            "请不要在该网站输入密码或支付信息。",
+            tr("确定要继续访问吗？\n\n继续访问会让本次连接失去证书保护，"
+            "请不要在该网站输入密码或支付信息。"),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         ) == QMessageBox.Yes:
             self.allowed = True
@@ -399,7 +401,7 @@ class ClearDataProgress(QWidget):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        self.label = QLabel("准备清理…")
+        self.label = QLabel(tr("准备清理…"))
         layout.addWidget(self.label)
         self.bar = QProgressBar()
         self.bar.setRange(0, 100)

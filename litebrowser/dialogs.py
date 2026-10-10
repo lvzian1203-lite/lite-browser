@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import icons, theme
+from . import i18n, icons, theme
 from . import netsec as security
 from .config import (
     APP_NAME,
@@ -48,6 +48,8 @@ from .config import (
 from .useragent import UA_PRESETS, default_user_agent
 from .widgets import XPDialog
 
+from .i18n import tr, trf
+
 
 class PasswordDialog(XPDialog):
     """设置 / 输入加密口令。"""
@@ -56,7 +58,7 @@ class PasswordDialog(XPDialog):
         self,
         parent: QWidget | None = None,
         *,
-        title: str = "设置加密口令",
+        title: str = tr("设置加密口令"),
         confirm: bool = True,
         prompt: str = "",
     ) -> None:
@@ -75,23 +77,23 @@ class PasswordDialog(XPDialog):
         form.setSpacing(8)
         self.edit_password = QLineEdit()
         self.edit_password.setEchoMode(QLineEdit.Password)
-        form.addRow("口令(P)：", self.edit_password)
+        form.addRow(tr("口令(P)："), self.edit_password)
         self.edit_confirm = QLineEdit()
         self.edit_confirm.setEchoMode(QLineEdit.Password)
-        form.addRow("确认口令(C)：", self.edit_confirm)
+        form.addRow(tr("确认口令(C)："), self.edit_confirm)
         if not confirm:
             self.edit_confirm.setVisible(False)
             form.labelForField(self.edit_confirm).setVisible(False)
         layout.addLayout(form)
 
-        hint = QLabel("口令用于保护书签、历史记录与下载记录（AES-256-GCM）。")
+        hint = QLabel(tr("口令用于保护书签、历史记录与下载记录（AES-256-GCM）。"))
         hint.setProperty("role", "hint")
         hint.setWordWrap(True)
         layout.addWidget(hint)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
-        buttons.button(QDialogButtonBox.Ok).setText("确定")
-        buttons.button(QDialogButtonBox.Cancel).setText("取消")
+        buttons.button(QDialogButtonBox.Ok).setText(tr("确定"))
+        buttons.button(QDialogButtonBox.Cancel).setText(tr("取消"))
         buttons.accepted.connect(self._on_ok)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons, 0, Qt.AlignRight)
@@ -99,10 +101,10 @@ class PasswordDialog(XPDialog):
 
     def _on_ok(self) -> None:
         if not self.edit_password.text():
-            QMessageBox.warning(self, APP_NAME, "口令不能为空。")
+            QMessageBox.warning(self, APP_NAME, tr("口令不能为空。"))
             return
         if self.edit_confirm.isVisible() and self.edit_password.text() != self.edit_confirm.text():
-            QMessageBox.warning(self, APP_NAME, "两次输入的口令不一致。")
+            QMessageBox.warning(self, APP_NAME, tr("两次输入的口令不一致。"))
             return
         self.accept()
 
@@ -123,9 +125,9 @@ def chromium_versions() -> tuple[str, str]:
         try:
             from PySide6.QtWebEngineCore import qWebEngineVersion  # type: ignore
 
-            return qWebEngineVersion(), "未知"
+            return qWebEngineVersion(), tr("未知")
         except Exception:
-            return "未知", "未知"
+            return tr("未知"), tr("未知")
 
 
 def engine_summary(engine_id: str) -> tuple[str, str, str]:
@@ -136,18 +138,18 @@ def engine_summary(engine_id: str) -> tuple[str, str, str]:
 
             version = wv2engine.browser_version()
         except Exception:
-            version = "未知"
+            version = tr("未知")
         return (
-            "Edge WebView2（Microsoft Edge 内核）",
+            tr("Edge WebView2（Microsoft Edge 内核）"),
             f"Chromium {version}",
-            "H.264 / AAC / MP3 等完整编解码器，可播放哔哩哔哩等站点",
+            tr("H.264 / AAC / MP3 等完整编解码器，可播放哔哩哔哩等站点"),
         )
 
     webengine_version, chromium_version = chromium_versions()
     return (
-        f"QtWebEngine {webengine_version}（Qt 自带内核）",
+        trf('QtWebEngine {0}（Qt 自带内核）', webengine_version),
         f"Chromium {chromium_version}",
-        "仅含开源编解码器（VP8/VP9/AV1/Opus），不支持 H.264/AAC",
+        tr("仅含开源编解码器（VP8/VP9/AV1/Opus），不支持 H.264/AAC"),
     )
 
 
@@ -182,10 +184,10 @@ class AboutPanel(QWidget):
         name.setProperty("role", "heading")
         title_box.addWidget(name)
 
-        version = QLabel(f"版本 {APP_VERSION}  （Chromium 内核）")
+        version = QLabel(trf('版本 {0}  （Chromium 内核）', APP_VERSION))
         title_box.addWidget(version)
         title_box.addSpacing(2)
-        author = QLabel(f"作者：{AUTHOR}")
+        author = QLabel(trf('作者：{0}', AUTHOR))
         author_font = QFont(author.font())
         author_font.setBold(True)
         author.setFont(author_font)
@@ -210,8 +212,8 @@ class AboutPanel(QWidget):
         layout.addWidget(info)
 
         tip = QLabel(
-            "本程序使用 Python + PySide6 编写。\n"
-            "可在「设置 → 外观 → 渲染引擎」中切换内核。"
+            tr("本程序使用 Python + PySide6 编写。\n"
+            "可在「设置 → 外观 → 渲染引擎」中切换内核。")
         )
         tip.setProperty("role", "hint")
         layout.addWidget(tip)
@@ -222,7 +224,7 @@ class AboutDialog(XPDialog):
     """独立的“关于 lite browser”对话框。"""
 
     def __init__(self, parent: QWidget | None = None, engine_id: str = "") -> None:
-        super().__init__(parent, title=f"关于 {APP_NAME}", icon_name="info")
+        super().__init__(parent, title=trf('关于 {0}', APP_NAME), icon_name="info")
         self.setMinimumWidth(460)
 
         layout = QVBoxLayout(self.body)
@@ -231,7 +233,7 @@ class AboutDialog(XPDialog):
         layout.addWidget(AboutPanel(self, engine_id))
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok, self)
-        buttons.button(QDialogButtonBox.Ok).setText("确定")
+        buttons.button(QDialogButtonBox.Ok).setText(tr("确定"))
         buttons.accepted.connect(self.accept)
         layout.addWidget(buttons, 0, Qt.AlignRight)
 
@@ -254,7 +256,7 @@ class SettingsDialog(XPDialog):
         history=None,
         downloads=None,
     ) -> None:
-        super().__init__(parent, title="设置", icon_name="settings")
+        super().__init__(parent, title=tr("设置"), icon_name="settings")
         self.config = config
         self.current_url = current_url
         self.current_engine = engine_id
@@ -269,22 +271,22 @@ class SettingsDialog(XPDialog):
         layout.setSpacing(8)
 
         self.tabs = QTabWidget(self)
-        self.tabs.addTab(self._scroll_page(self._build_general()), "常规")
-        self.tabs.addTab(self._scroll_page(self._build_appearance()), "外观")
-        self.tabs.addTab(self._scroll_page(self._build_performance()), "性能")
-        self.tabs.addTab(self._scroll_page(self._build_network()), "网络")
-        self.tabs.addTab(self._scroll_page(self._build_engine_env()), "内核与环境")
-        self.tabs.addTab(self._scroll_page(self._build_privacy()), "隐私与安全")
-        self.tabs.addTab(AboutPanel(self.tabs, engine_id), "关于")
+        self.tabs.addTab(self._scroll_page(self._build_general()), tr("常规"))
+        self.tabs.addTab(self._scroll_page(self._build_appearance()), tr("外观"))
+        self.tabs.addTab(self._scroll_page(self._build_performance()), tr("性能"))
+        self.tabs.addTab(self._scroll_page(self._build_network()), tr("网络"))
+        self.tabs.addTab(self._scroll_page(self._build_engine_env()), tr("内核与环境"))
+        self.tabs.addTab(self._scroll_page(self._build_privacy()), tr("隐私与安全"))
+        self.tabs.addTab(AboutPanel(self.tabs, engine_id), tr("关于"))
         self.tabs.setCurrentIndex(max(0, min(initial_tab, self.tabs.count() - 1)))
         layout.addWidget(self.tabs, 1)
 
         row = QHBoxLayout()
         row.addStretch(1)
-        self.btn_ok = QPushButton("确定")
+        self.btn_ok = QPushButton(tr("确定"))
         self.btn_ok.setDefault(True)
-        self.btn_cancel = QPushButton("取消")
-        self.btn_apply = QPushButton("应用(A)")
+        self.btn_cancel = QPushButton(tr("取消"))
+        self.btn_apply = QPushButton(tr("应用(A)"))
         self.btn_apply.setEnabled(False)
         row.addWidget(self.btn_ok)
         row.addWidget(self.btn_cancel)
@@ -316,13 +318,13 @@ class SettingsDialog(XPDialog):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
 
-        home_box = QGroupBox("主页")
+        home_box = QGroupBox(tr("主页"))
         home_layout = QVBoxLayout(home_box)
         home_layout.setSpacing(6)
-        home_layout.addWidget(QLabel("可以指定浏览器启动时以及点击“主页”按钮时打开的页面："))
+        home_layout.addWidget(QLabel(tr("可以指定浏览器启动时以及点击“主页”按钮时打开的页面：")))
 
         url_row = QHBoxLayout()
-        url_row.addWidget(QLabel("主页地址(H)："))
+        url_row.addWidget(QLabel(tr("主页地址(H)：")))
         self.edit_home = QLineEdit()
         self.edit_home.setPlaceholderText(DEFAULT_HOMEPAGE)
         url_row.addWidget(self.edit_home, 1)
@@ -330,9 +332,9 @@ class SettingsDialog(XPDialog):
 
         btn_row = QHBoxLayout()
         btn_row.addStretch(1)
-        self.btn_use_current = QPushButton("使用当前页(C)")
-        self.btn_use_default = QPushButton("使用默认页(D)")
-        self.btn_use_blank = QPushButton("使用空白页(B)")
+        self.btn_use_current = QPushButton(tr("使用当前页(C)"))
+        self.btn_use_default = QPushButton(tr("使用默认页(D)"))
+        self.btn_use_blank = QPushButton(tr("使用空白页(B)"))
         self.btn_use_current.setEnabled(bool(self.current_url))
         btn_row.addWidget(self.btn_use_current)
         btn_row.addWidget(self.btn_use_default)
@@ -340,34 +342,34 @@ class SettingsDialog(XPDialog):
         home_layout.addLayout(btn_row)
         layout.addWidget(home_box)
 
-        start_box = QGroupBox("启动时")
+        start_box = QGroupBox(tr("启动时"))
         start_layout = QVBoxLayout(start_box)
-        self.radio_home = QRadioButton("打开主页")
-        self.radio_blank = QRadioButton("打开空白页")
-        self.radio_last = QRadioButton("打开上次关闭时的页面")
+        self.radio_home = QRadioButton(tr("打开主页"))
+        self.radio_blank = QRadioButton(tr("打开空白页"))
+        self.radio_last = QRadioButton(tr("打开上次关闭时的页面"))
         for radio in (self.radio_home, self.radio_blank, self.radio_last):
             start_layout.addWidget(radio)
         layout.addWidget(start_box)
 
-        search_box = QGroupBox("地址栏搜索")
+        search_box = QGroupBox(tr("地址栏搜索"))
         search_layout = QFormLayout(search_box)
         self.combo_search = QComboBox()
         for engine in SEARCH_ENGINES:
             self.combo_search.addItem(engine["name"], engine["id"])
-        search_layout.addRow("默认搜索引擎(S)：", self.combo_search)
+        search_layout.addRow(tr("默认搜索引擎(S)："), self.combo_search)
         layout.addWidget(search_box)
 
-        download_box = QGroupBox("下载")
+        download_box = QGroupBox(tr("下载"))
         download_layout = QVBoxLayout(download_box)
         folder_row = QHBoxLayout()
-        folder_row.addWidget(QLabel("下载目录(D)："))
+        folder_row.addWidget(QLabel(tr("下载目录(D)：")))
         self.edit_download_dir = QLineEdit(str(self.config.get("download_dir") or ""))
-        self.edit_download_dir.setPlaceholderText("首次下载时会提示选择")
+        self.edit_download_dir.setPlaceholderText(tr("首次下载时会提示选择"))
         folder_row.addWidget(self.edit_download_dir, 1)
-        self.btn_browse_dir = QPushButton("浏览(B)...")
+        self.btn_browse_dir = QPushButton(tr("浏览(B)..."))
         folder_row.addWidget(self.btn_browse_dir)
         download_layout.addLayout(folder_row)
-        self.check_ask_dir = QCheckBox("每次下载都询问保存位置")
+        self.check_ask_dir = QCheckBox(tr("每次下载都询问保存位置"))
         download_layout.addWidget(self.check_ask_dir)
         layout.addWidget(download_box)
         layout.addStretch(1)
@@ -384,7 +386,7 @@ class SettingsDialog(XPDialog):
 
     def _browse_download_dir(self) -> None:
         folder = QFileDialog.getExistingDirectory(
-            self, "选择下载目录", self.edit_download_dir.text() or str(Path.home())
+            self, tr("选择下载目录"), self.edit_download_dir.text() or str(Path.home())
         )
         if folder:
             self.edit_download_dir.setText(folder)
@@ -395,12 +397,12 @@ class SettingsDialog(XPDialog):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
 
-        ad_box = QGroupBox("广告与弹窗拦截")
+        ad_box = QGroupBox(tr("广告与弹窗拦截"))
         ad_layout = QVBoxLayout(ad_box)
-        self.check_block_popups = QCheckBox("拦截网页自动弹出的窗口（非用户点击触发）")
+        self.check_block_popups = QCheckBox(tr("拦截网页自动弹出的窗口（非用户点击触发）"))
         ad_layout.addWidget(self.check_block_popups)
         rule_row = QHBoxLayout()
-        self.btn_ad_rules = QPushButton("广告屏蔽规则(&R)...")
+        self.btn_ad_rules = QPushButton(tr("广告屏蔽规则(&R)..."))
         rule_row.addWidget(self.btn_ad_rules)
         rule_row.addStretch(1)
         ad_layout.addLayout(rule_row)
@@ -415,47 +417,47 @@ class SettingsDialog(XPDialog):
         ad_layout.addWidget(ad_hint)
         layout.addWidget(ad_box)
 
-        incognito_box = QGroupBox("无痕浏览")
+        incognito_box = QGroupBox(tr("无痕浏览"))
         incognito_layout = QVBoxLayout(incognito_box)
-        self.check_incognito = QCheckBox("启用无痕浏览模式（不记录历史、Cookie 与缓存）")
+        self.check_incognito = QCheckBox(tr("启用无痕浏览模式（不记录历史、Cookie 与缓存）"))
         incognito_layout.addWidget(self.check_incognito)
         incognito_hint = QLabel(
-            "开启后：浏览历史不写入磁盘，Cookie / 缓存仅保存在内存中，\n"
-            "关闭程序或切换模式后不会保留。切换模式会重新打开标签页。"
+            tr("开启后：浏览历史不写入磁盘，Cookie / 缓存仅保存在内存中，\n"
+            "关闭程序或切换模式后不会保留。切换模式会重新打开标签页。")
         )
         incognito_hint.setProperty("role", "hint")
         incognito_layout.addWidget(incognito_hint)
         layout.addWidget(incognito_box)
 
-        history_box = QGroupBox("浏览历史")
+        history_box = QGroupBox(tr("浏览历史"))
         history_layout = QVBoxLayout(history_box)
-        self.check_history = QCheckBox("记录浏览历史（含打开日期与时间）")
+        self.check_history = QCheckBox(tr("记录浏览历史（含打开日期与时间）"))
         history_layout.addWidget(self.check_history)
         keep_row = QHBoxLayout()
-        keep_row.addWidget(QLabel("保留时间(K)："))
+        keep_row.addWidget(QLabel(tr("保留时间(K)：")))
         self.combo_keep = QComboBox()
-        self.combo_keep.addItem("永久保留", 0)
-        self.combo_keep.addItem("30 天", 30)
-        self.combo_keep.addItem("90 天", 90)
-        self.combo_keep.addItem("180 天", 180)
-        self.combo_keep.addItem("365 天", 365)
+        self.combo_keep.addItem(tr("永久保留"), 0)
+        self.combo_keep.addItem(tr("30 天"), 30)
+        self.combo_keep.addItem(tr("90 天"), 90)
+        self.combo_keep.addItem(tr("180 天"), 180)
+        self.combo_keep.addItem(tr("365 天"), 365)
         keep_row.addWidget(self.combo_keep)
         keep_row.addStretch(1)
-        self.btn_clear_history = QPushButton("立即清除历史记录")
+        self.btn_clear_history = QPushButton(tr("立即清除历史记录"))
         keep_row.addWidget(self.btn_clear_history)
         history_layout.addLayout(keep_row)
         layout.addWidget(history_box)
 
-        crypto_box = QGroupBox("数据加密")
+        crypto_box = QGroupBox(tr("数据加密"))
         crypto_layout = QVBoxLayout(crypto_box)
         self.lbl_crypto = QLabel("")
         self.lbl_crypto.setWordWrap(True)
         self.lbl_crypto.setProperty("role", "info")
         crypto_layout.addWidget(self.lbl_crypto)
         crypto_row = QHBoxLayout()
-        self.btn_set_password = QPushButton("设置口令(P)...")
-        self.btn_clear_password = QPushButton("取消口令")
-        self.btn_export_plain = QPushButton("导出明文数据(E)...")
+        self.btn_set_password = QPushButton(tr("设置口令(P)..."))
+        self.btn_clear_password = QPushButton(tr("取消口令"))
+        self.btn_export_plain = QPushButton(tr("导出明文数据(E)..."))
         crypto_row.addWidget(self.btn_set_password)
         crypto_row.addWidget(self.btn_clear_password)
         crypto_row.addWidget(self.btn_export_plain)
@@ -463,16 +465,16 @@ class SettingsDialog(XPDialog):
         crypto_layout.addLayout(crypto_row)
         layout.addWidget(crypto_box)
 
-        data_box = QGroupBox("Cookie 与缓存")
+        data_box = QGroupBox(tr("Cookie 与缓存"))
         data_layout = QVBoxLayout(data_box)
         self.lbl_data = QLabel("")
         self.lbl_data.setWordWrap(True)
         self.lbl_data.setProperty("role", "info")
         data_layout.addWidget(self.lbl_data)
         data_row = QHBoxLayout()
-        self.btn_data_manager = QPushButton("管理 Cookie 与缓存(M)...")
-        self.btn_clear_cache_now = QPushButton("立即清除缓存")
-        self.btn_clear_cookies_now = QPushButton("立即清除 Cookie")
+        self.btn_data_manager = QPushButton(tr("管理 Cookie 与缓存(M)..."))
+        self.btn_clear_cache_now = QPushButton(tr("立即清除缓存"))
+        self.btn_clear_cookies_now = QPushButton(tr("立即清除 Cookie"))
         data_row.addWidget(self.btn_data_manager)
         data_row.addWidget(self.btn_clear_cache_now)
         data_row.addWidget(self.btn_clear_cookies_now)
@@ -501,7 +503,7 @@ class SettingsDialog(XPDialog):
 
         manager = getattr(self.parent(), "performance", None)
         if manager is None:
-            self.lbl_data.setText("Cookie 与缓存由内核管理，可在此查看与清理。")
+            self.lbl_data.setText(tr("Cookie 与缓存由内核管理，可在此查看与清理。"))
             return
         stats = manager.stats()
         self.lbl_data.setText(
@@ -531,49 +533,49 @@ class SettingsDialog(XPDialog):
     def _clear_cache_now(self) -> None:
         engine = self._engine()
         if engine is None:
-            QMessageBox.information(self, APP_NAME, "请先打开一个标签页。")
+            QMessageBox.information(self, APP_NAME, tr("请先打开一个标签页。"))
             return
         engine.clear_cache()
         self._refresh_data_label()
-        QMessageBox.information(self, APP_NAME, "已清除磁盘缓存。")
+        QMessageBox.information(self, APP_NAME, tr("已清除磁盘缓存。"))
 
     def _clear_cookies_now(self) -> None:
         engine = self._engine()
         if engine is None:
-            QMessageBox.information(self, APP_NAME, "请先打开一个标签页。")
+            QMessageBox.information(self, APP_NAME, tr("请先打开一个标签页。"))
             return
         if QMessageBox.question(
-            self, APP_NAME, "确定清除全部 Cookie 吗？所有网站的登录状态都会失效。",
+            self, APP_NAME, tr("确定清除全部 Cookie 吗？所有网站的登录状态都会失效。"),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         ) != QMessageBox.Yes:
             return
         engine.delete_all_cookies()
         self._refresh_data_label()
-        QMessageBox.information(self, APP_NAME, "已清除全部 Cookie。")
+        QMessageBox.information(self, APP_NAME, tr("已清除全部 Cookie。"))
 
     # -- 加密相关 --------------------------------------------------------- #
     def _refresh_crypto_label(self) -> None:
         if self.vault is None:
-            self.lbl_crypto.setText("（未初始化数据保险库）")
+            self.lbl_crypto.setText(tr("（未初始化数据保险库）"))
             self.btn_set_password.setEnabled(False)
             self.btn_clear_password.setEnabled(False)
             self.btn_export_plain.setEnabled(False)
             return
-        text = f"加密算法：AES-256-GCM\n当前状态：{self.vault.describe()}\n"
-        text += "涉及文件：data\\bookmarks.dat、history.dat、downloads.dat"
+        text = trf('加密算法：AES-256-GCM\n当前状态：{0}\n', self.vault.describe())
+        text += tr("涉及文件：data\\bookmarks.dat、history.dat、downloads.dat")
         self.lbl_crypto.setText(text)
         self.btn_clear_password.setEnabled(bool(getattr(self.vault, "has_password", lambda: False)()))
 
     def _set_password(self) -> None:
         if self.vault is None:
             return
-        dialog = PasswordDialog(self, title="设置加密口令")
+        dialog = PasswordDialog(self, title=tr("设置加密口令"))
         if dialog.exec() != QDialog.Accepted:
             return
         try:
             self.vault.set_password(dialog.password())
         except Exception as exc:  # noqa: BLE001
-            QMessageBox.critical(self, APP_NAME, f"设置口令失败：{exc}")
+            QMessageBox.critical(self, APP_NAME, trf('设置口令失败：{0}', exc))
             return
         # 用新密钥重新加密各数据文件
         if self.history is not None:
@@ -582,14 +584,14 @@ class SettingsDialog(XPDialog):
             self.downloads.save()
         if self.parent() is not None and hasattr(self.parent(), "resave_bookmarks"):
             self.parent().resave_bookmarks()
-        QMessageBox.information(self, APP_NAME, "已启用口令保护，下次启动需要输入口令。")
+        QMessageBox.information(self, APP_NAME, tr("已启用口令保护，下次启动需要输入口令。"))
         self._refresh_crypto_label()
 
     def _clear_password(self) -> None:
         if self.vault is None:
             return
         answer = QMessageBox.question(
-            self, APP_NAME, "取消口令后，主密钥将改由 Windows 账户保护，是否继续？",
+            self, APP_NAME, tr("取消口令后，主密钥将改由 Windows 账户保护，是否继续？"),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         )
         if answer != QMessageBox.Yes:
@@ -597,32 +599,32 @@ class SettingsDialog(XPDialog):
         try:
             self.vault.clear_password()
         except Exception as exc:  # noqa: BLE001
-            QMessageBox.critical(self, APP_NAME, f"取消失败：{exc}")
+            QMessageBox.critical(self, APP_NAME, trf('取消失败：{0}', exc))
             return
         self._refresh_crypto_label()
 
     def _export_plain(self) -> None:
         if self.vault is None:
             return
-        folder = QFileDialog.getExistingDirectory(self, "导出明文数据到", str(Path.home()))
+        folder = QFileDialog.getExistingDirectory(self, tr("导出明文数据到"), str(Path.home()))
         if not folder:
             return
         if self.parent() is not None and hasattr(self.parent(), "export_plain_data"):
             count = self.parent().export_plain_data(Path(folder))
-            QMessageBox.information(self, APP_NAME, f"已导出 {count} 个文件到：\n{folder}")
+            QMessageBox.information(self, APP_NAME, trf('已导出 {0} 个文件到：\n{1}', count, folder))
         else:
-            QMessageBox.warning(self, APP_NAME, "导出失败：无法访问主窗口。")
+            QMessageBox.warning(self, APP_NAME, tr("导出失败：无法访问主窗口。"))
 
     def _clear_history(self) -> None:
         if self.history is None:
             return
         answer = QMessageBox.question(
-            self, APP_NAME, "确定要清空全部历史记录吗？",
+            self, APP_NAME, tr("确定要清空全部历史记录吗？"),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         )
         if answer == QMessageBox.Yes:
             self.history.clear()
-            QMessageBox.information(self, APP_NAME, "历史记录已清空。")
+            QMessageBox.information(self, APP_NAME, tr("历史记录已清空。"))
 
     def _build_appearance(self) -> QWidget:
         page = QWidget()
@@ -630,62 +632,73 @@ class SettingsDialog(XPDialog):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
 
-        theme_box = QGroupBox("界面风格")
+        theme_box = QGroupBox(tr("界面风格"))
         theme_layout = QVBoxLayout(theme_box)
 
         row_style = QHBoxLayout()
-        row_style.addWidget(QLabel("UI 风格(T)："))
+        row_style.addWidget(QLabel(tr("UI 风格(T)：")))
         self.combo_theme = QComboBox()
         for theme_id, name in theme.theme_names():
-            self.combo_theme.addItem(name, theme_id)
+            self.combo_theme.addItem(tr(name), theme_id)
         row_style.addWidget(self.combo_theme, 1)
         theme_layout.addLayout(row_style)
 
+        # 界面语言：中文（简体）/ English
+        row_lang = QHBoxLayout()
+        row_lang.addWidget(QLabel(tr("界面语言(L)：")))
+        self.combo_language = QComboBox()
+        for code, name in i18n.available_languages():
+            self.combo_language.addItem(name, code)
+        self.combo_language.setToolTip(tr("切换到 English 后，菜单、对话框与提示都会变成英文"))
+        self.combo_language.currentIndexChanged.connect(self._on_language_changed)
+        row_lang.addWidget(self.combo_language, 1)
+        theme_layout.addLayout(row_lang)
+
         row_mode = QHBoxLayout()
-        row_mode.addWidget(QLabel("明暗模式(M)："))
+        row_mode.addWidget(QLabel(tr("明暗模式(M)：")))
         self.combo_mode = QComboBox()
-        self.combo_mode.addItem("浅色", "light")
-        self.combo_mode.addItem("深色", "dark")
+        self.combo_mode.addItem(tr("浅色"), "light")
+        self.combo_mode.addItem(tr("深色"), "dark")
         row_mode.addWidget(self.combo_mode, 1)
         theme_layout.addLayout(row_mode)
 
         row_accent = QHBoxLayout()
-        self.check_accent = QCheckBox("自定义边框颜色")
+        self.check_accent = QCheckBox(tr("自定义边框颜色"))
         row_accent.addWidget(self.check_accent)
-        self.btn_accent = QPushButton("选择颜色(C)...")
+        self.btn_accent = QPushButton(tr("选择颜色(C)..."))
         self.btn_accent.clicked.connect(self._pick_accent)
         row_accent.addWidget(self.btn_accent)
         self.accent_preview = QLabel()
         self.accent_preview.setFixedSize(40, 18)
         self.accent_preview.setFrameShape(QLabel.Box)
         row_accent.addWidget(self.accent_preview)
-        self.btn_accent_reset = QPushButton("用主题默认值")
+        self.btn_accent_reset = QPushButton(tr("用主题默认值"))
         self.btn_accent_reset.clicked.connect(self._reset_accent)
         row_accent.addWidget(self.btn_accent_reset)
         row_accent.addStretch(1)
         theme_layout.addLayout(row_accent)
 
         theme_hint = QLabel(
-            f"可切换 {len(theme.THEME_ORDER)} 种界面风格（"
+            trf('可切换 {0} 种界面风格（', len(theme.THEME_ORDER))
             + "、".join(
                 name.split("（")[0].split(" (")[0] for _tid, name in theme.theme_names()
             )
-            + "），并支持深色 / 浅色模式；"
-            "自定义边框颜色会同时应用到标题栏与窗口边框。切换后立即生效，无需重启。"
+            + tr("），并支持深色 / 浅色模式；"
+            "自定义边框颜色会同时应用到标题栏与窗口边框。切换后立即生效，无需重启。")
         )
         theme_hint.setWordWrap(True)
         theme_hint.setProperty("role", "hint")
         theme_layout.addWidget(theme_hint)
         layout.addWidget(theme_box)
 
-        engine_box = QGroupBox("渲染引擎（切换后需重启程序）")
+        engine_box = QGroupBox(tr("渲染引擎（切换后需重启程序）"))
         engine_layout = QVBoxLayout(engine_box)
         row = QHBoxLayout()
-        row.addWidget(QLabel("内核(E)："))
+        row.addWidget(QLabel(tr("内核(E)：")))
         self.combo_engine = QComboBox()
         from .engine import ENGINE_AUTO, ENGINE_LABELS, available_engines
 
-        self.combo_engine.addItem("自动选择（推荐）", ENGINE_AUTO)
+        self.combo_engine.addItem(tr("自动选择（推荐）"), ENGINE_AUTO)
         for item in available_engines():
             self.combo_engine.addItem(ENGINE_LABELS.get(item, item), item)
         row.addWidget(self.combo_engine, 1)
@@ -693,37 +706,36 @@ class SettingsDialog(XPDialog):
 
         _name, _version, codec = engine_summary(self.current_engine)
         engine_note = QLabel(
-            f"当前引擎：{_name}\n"
-            f"视频解码：{codec}"
+            trf('当前引擎：{0}\n视频解码：{1}', _name, codec)
         )
         engine_note.setWordWrap(True)
         engine_note.setProperty("role", "info")
         engine_layout.addWidget(engine_note)
         layout.addWidget(engine_box)
 
-        bar_box = QGroupBox("工具栏")
+        bar_box = QGroupBox(tr("工具栏"))
         bar_layout = QVBoxLayout(bar_box)
-        self.check_bookmark_bar = QCheckBox("显示书签栏")
-        self.check_status_bar = QCheckBox("显示状态栏")
+        self.check_bookmark_bar = QCheckBox(tr("显示书签栏"))
+        self.check_status_bar = QCheckBox(tr("显示状态栏"))
         bar_layout.addWidget(self.check_bookmark_bar)
         bar_layout.addWidget(self.check_status_bar)
         layout.addWidget(bar_box)
 
-        frame_box = QGroupBox("窗口")
+        frame_box = QGroupBox(tr("窗口"))
         frame_layout = QVBoxLayout(frame_box)
-        self.check_native_frame = QCheckBox("使用系统原生窗口边框（经典 XP 外观请勿勾选）")
+        self.check_native_frame = QCheckBox(tr("使用系统原生窗口边框（经典 XP 外观请勿勾选）"))
         frame_layout.addWidget(self.check_native_frame)
-        hint = QLabel("修改窗口边框样式需要重启 lite browser 才会生效。")
+        hint = QLabel(tr("修改窗口边框样式需要重启 lite browser 才会生效。"))
         hint.setProperty("role", "hint")
         frame_layout.addWidget(hint)
         layout.addWidget(frame_box)
 
-        zoom_box = QGroupBox("网页缩放")
+        zoom_box = QGroupBox(tr("网页缩放"))
         zoom_layout = QHBoxLayout(zoom_box)
         self.combo_zoom = QComboBox()
         for percent in (50, 75, 90, 100, 110, 125, 150, 175, 200):
             self.combo_zoom.addItem(f"{percent}%", percent)
-        zoom_layout.addWidget(QLabel("默认缩放比例(Z)："))
+        zoom_layout.addWidget(QLabel(tr("默认缩放比例(Z)：")))
         zoom_layout.addWidget(self.combo_zoom)
         zoom_layout.addStretch(1)
         layout.addWidget(zoom_box)
@@ -737,38 +749,38 @@ class SettingsDialog(XPDialog):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
 
-        memory_box = QGroupBox("内存优化")
+        memory_box = QGroupBox(tr("内存优化"))
         memory_layout = QVBoxLayout(memory_box)
-        self.check_suspend = QCheckBox("后台标签页闲置后自动挂起（释放渲染进程内存）")
+        self.check_suspend = QCheckBox(tr("后台标签页闲置后自动挂起（释放渲染进程内存）"))
         memory_layout.addWidget(self.check_suspend)
         delay_row = QHBoxLayout()
-        delay_row.addWidget(QLabel("闲置时间超过(A)："))
+        delay_row.addWidget(QLabel(tr("闲置时间超过(A)：")))
         self.spin_suspend = QSpinBox()
         self.spin_suspend.setRange(1, 240)
-        self.spin_suspend.setSuffix(" 分钟")
+        self.spin_suspend.setSuffix(tr(" 分钟"))
         self.spin_suspend.setFixedWidth(110)
         delay_row.addWidget(self.spin_suspend)
         delay_row.addStretch(1)
-        self.btn_suspend_now = QPushButton("立即挂起后台标签页")
+        self.btn_suspend_now = QPushButton(tr("立即挂起后台标签页"))
         delay_row.addWidget(self.btn_suspend_now)
         memory_layout.addLayout(delay_row)
         memory_hint = QLabel(
-            "挂起后内核会释放该标签页的渲染进程与内存，切回该标签页时自动恢复，"
-            "页面状态（滚动位置、表单内容）不会丢失。"
+            tr("挂起后内核会释放该标签页的渲染进程与内存，切回该标签页时自动恢复，"
+            "页面状态（滚动位置、表单内容）不会丢失。")
         )
         memory_hint.setWordWrap(True)
         memory_hint.setProperty("role", "hint")
         memory_layout.addWidget(memory_hint)
         layout.addWidget(memory_box)
 
-        start_box = QGroupBox("启动与加载")
+        start_box = QGroupBox(tr("启动与加载"))
         start_layout = QVBoxLayout(start_box)
-        self.check_restore_session = QCheckBox("启动时恢复上次关闭时的标签页")
+        self.check_restore_session = QCheckBox(tr("启动时恢复上次关闭时的标签页"))
         self.check_preload = QCheckBox(
-            "预读取当前网页中的链接（DNS 预解析 / 预连接，默认关闭）"
+            tr("预读取当前网页中的链接（DNS 预解析 / 预连接，默认关闭）")
         )
-        self.check_smooth_scroll = QCheckBox("开启平滑滚动")
-        self.check_images = QCheckBox("加载网页图片（关闭可显著提速省流量）")
+        self.check_smooth_scroll = QCheckBox(tr("开启平滑滚动"))
+        self.check_images = QCheckBox(tr("加载网页图片（关闭可显著提速省流量）"))
         for widget in (
             self.check_restore_session,
             self.check_preload,
@@ -789,14 +801,14 @@ class SettingsDialog(XPDialog):
         start_layout.addWidget(preload_hint)
         layout.addWidget(start_box)
 
-        stats_box = QGroupBox("运行状态")
+        stats_box = QGroupBox(tr("运行状态"))
         stats_layout = QVBoxLayout(stats_box)
-        self.lbl_perf = QLabel("正在统计…")
+        self.lbl_perf = QLabel(tr("正在统计…"))
         self.lbl_perf.setWordWrap(True)
         stats_layout.addWidget(self.lbl_perf)
         stats_row = QHBoxLayout()
-        self.btn_refresh_stats = QPushButton("刷新统计(R)")
-        self.btn_clean_cache = QPushButton("清理缓存(C)")
+        self.btn_refresh_stats = QPushButton(tr("刷新统计(R)"))
+        self.btn_clean_cache = QPushButton(tr("清理缓存(C)"))
         stats_row.addWidget(self.btn_refresh_stats)
         stats_row.addWidget(self.btn_clean_cache)
         stats_row.addStretch(1)
@@ -814,9 +826,9 @@ class SettingsDialog(XPDialog):
 
         manager = getattr(self.parent(), "performance", None)
         startup = float(self.config.get("last_startup_seconds") or 0)
-        startup_text = f"上次启动耗时：<b>{format_duration(startup)}</b><br>" if startup else ""
+        startup_text = trf('上次启动耗时：<b>{0}</b><br>', format_duration(startup)) if startup else ""
         if manager is None:
-            self.lbl_perf.setText(startup_text or "（性能管理器未启用）")
+            self.lbl_perf.setText(startup_text or tr("（性能管理器未启用）"))
             return
         stats = manager.stats()
         self.lbl_perf.setText(
@@ -835,7 +847,7 @@ class SettingsDialog(XPDialog):
             return
         count = manager.suspend_all_background()
         self._refresh_perf()
-        QMessageBox.information(self, APP_NAME, f"已挂起 {count} 个后台标签页，切回时自动恢复。")
+        QMessageBox.information(self, APP_NAME, trf('已挂起 {0} 个后台标签页，切回时自动恢复。', count))
 
     def _clean_cache(self) -> None:
         parent = self.parent()
@@ -843,11 +855,11 @@ class SettingsDialog(XPDialog):
         if parent is not None and hasattr(parent, "current_engine"):
             engine = parent.current_engine()
         if engine is None:
-            QMessageBox.information(self, APP_NAME, "请先打开一个标签页。")
+            QMessageBox.information(self, APP_NAME, tr("请先打开一个标签页。"))
             return
         engine.clear_cache()
         self._refresh_perf()
-        QMessageBox.information(self, APP_NAME, "已清除磁盘缓存。")
+        QMessageBox.information(self, APP_NAME, tr("已清除磁盘缓存。"))
 
     # -- 网络 ------------------------------------------------------------- #
     def _build_network(self) -> QWidget:
@@ -856,14 +868,14 @@ class SettingsDialog(XPDialog):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
 
-        flash_box = QGroupBox("Flash 兼容（Ruffle，无广告）")
+        flash_box = QGroupBox(tr("Flash 兼容（Ruffle，无广告）"))
         flash_layout = QVBoxLayout(flash_box)
         self.check_flash = QCheckBox(
-            "启用 Flash 兼容：用小游戏/动画网站需要的 Flash 运行时"
+            tr("启用 Flash 兼容：用小游戏/动画网站需要的 Flash 运行时")
         )
         flash_layout.addWidget(self.check_flash)
         flash_row = QHBoxLayout()
-        self.btn_flash_test = QPushButton("打开 Flash 小游戏测试(&T)")
+        self.btn_flash_test = QPushButton(tr("打开 Flash 小游戏测试(&T)"))
         flash_row.addWidget(self.btn_flash_test)
         flash_row.addStretch(1)
         flash_layout.addLayout(flash_row)
@@ -886,10 +898,10 @@ class SettingsDialog(XPDialog):
         flash_layout.addWidget(flash_hint)
         layout.addWidget(flash_box)
 
-        ua_box = QGroupBox("User-Agent（用户代理）")
+        ua_box = QGroupBox(tr("User-Agent（用户代理）"))
         ua_layout = QVBoxLayout(ua_box)
         ua_row = QHBoxLayout()
-        ua_row.addWidget(QLabel("预设(U)："))
+        ua_row.addWidget(QLabel(tr("预设(U)：")))
         self.combo_ua = QComboBox()
         for name, value in UA_PRESETS:
             self.combo_ua.addItem(name, value)
@@ -897,9 +909,9 @@ class SettingsDialog(XPDialog):
         ua_layout.addLayout(ua_row)
 
         custom_row = QHBoxLayout()
-        custom_row.addWidget(QLabel("自定义值(C)："))
+        custom_row.addWidget(QLabel(tr("自定义值(C)：")))
         self.edit_ua = QLineEdit()
-        self.edit_ua.setPlaceholderText("留空表示使用内核默认 User-Agent")
+        self.edit_ua.setPlaceholderText(tr("留空表示使用内核默认 User-Agent"))
         custom_row.addWidget(self.edit_ua, 1)
         ua_layout.addLayout(custom_row)
 
@@ -910,29 +922,29 @@ class SettingsDialog(XPDialog):
         ua_layout.addWidget(self.lbl_ua_effective)
         layout.addWidget(ua_box)
 
-        cert_box = QGroupBox("HTTPS 证书校验")
+        cert_box = QGroupBox(tr("HTTPS 证书校验"))
         cert_layout = QVBoxLayout(cert_box)
-        self.check_strict_cert = QCheckBox("严格模式：证书有问题时直接拒绝，不询问")
-        self.check_cert_warn = QCheckBox("证书有问题时弹出提示，由我决定是否继续")
+        self.check_strict_cert = QCheckBox(tr("严格模式：证书有问题时直接拒绝，不询问"))
+        self.check_cert_warn = QCheckBox(tr("证书有问题时弹出提示，由我决定是否继续"))
         cert_layout.addWidget(self.check_strict_cert)
         cert_layout.addWidget(self.check_cert_warn)
         cert_hint = QLabel(
-            "证书校验用于确认网站身份并加密通信。关闭提示后，证书异常将按内核默认行为处理（通常直接拦截）。"
+            tr("证书校验用于确认网站身份并加密通信。关闭提示后，证书异常将按内核默认行为处理（通常直接拦截）。")
         )
         cert_hint.setWordWrap(True)
         cert_hint.setProperty("role", "hint")
         cert_layout.addWidget(cert_hint)
         layout.addWidget(cert_box)
 
-        safe_box = QGroupBox("可疑网址拦截")
+        safe_box = QGroupBox(tr("可疑网址拦截"))
         safe_layout = QVBoxLayout(safe_box)
-        self.check_block = QCheckBox("启用可疑网址拦截（黑名单 + 本地启发式规则）")
+        self.check_block = QCheckBox(tr("启用可疑网址拦截（黑名单 + 本地启发式规则）"))
         safe_layout.addWidget(self.check_block)
         safe_row = QHBoxLayout()
-        self.btn_blocklist = QPushButton("管理黑名单(L)...")
+        self.btn_blocklist = QPushButton(tr("管理黑名单(L)..."))
         self.btn_blocklist.clicked.connect(self._edit_blocklist)
         safe_row.addWidget(self.btn_blocklist)
-        self.btn_blocklist_file = QPushButton("打开名单文件(F)")
+        self.btn_blocklist_file = QPushButton(tr("打开名单文件(F)"))
         self.btn_blocklist_file.clicked.connect(self._open_blocklist_file)
         safe_row.addWidget(self.btn_blocklist_file)
         safe_row.addStretch(1)
@@ -970,10 +982,10 @@ class SettingsDialog(XPDialog):
         value = self.edit_ua.text().strip()
         if not value:
             value = default_user_agent()
-            prefix = "当前使用内核默认 UA："
+            prefix = tr("当前使用内核默认 UA：")
         else:
-            prefix = "当前将使用自定义 UA："
-        extra = "（移动端标识，网站会返回手机版页面）" if is_mobile(value) else ""
+            prefix = tr("当前将使用自定义 UA：")
+        extra = tr("（移动端标识，网站会返回手机版页面）") if is_mobile(value) else ""
         self.lbl_ua_effective.setText(f"{prefix}{extra}\n{value}")
 
     def _on_strict_toggled(self, checked: bool) -> None:
@@ -984,7 +996,7 @@ class SettingsDialog(XPDialog):
         parent = self.parent()
         manager = getattr(parent, "security", None)
         if manager is None:
-            QMessageBox.information(self, APP_NAME, "（安全管理器未启用）")
+            QMessageBox.information(self, APP_NAME, tr("（安全管理器未启用）"))
             return
         dialog = BlocklistDialog(manager, self)
         dialog.exec()
@@ -1007,7 +1019,7 @@ class SettingsDialog(XPDialog):
             try:
                 subprocess.Popen(["notepad.exe", str(path)])
             except Exception:
-                QMessageBox.information(self, APP_NAME, f"名单文件位置：\n{path}")
+                QMessageBox.information(self, APP_NAME, trf('名单文件位置：\n{0}', path))
 
     def _update_flash_label(self) -> None:
         """显示 Ruffle 的版本、体积与当前内核是否支持。"""
@@ -1019,22 +1031,22 @@ class SettingsDialog(XPDialog):
         # 按能力表判断（P2-2）
         engine_ok = capabilities_for(self.current_engine).ruffle
         if not info["available"]:
-            self.lbl_flash.setText("⚠ 未找到内置的 Ruffle 文件（lib/ruffle），Flash 兼容不可用。")
+            self.lbl_flash.setText(tr("⚠ 未找到内置的 Ruffle 文件（lib/ruffle），Flash 兼容不可用。"))
             self.check_flash.setEnabled(False)
             return
         parts = [
-            f"内置版本：{info['version']}　体积：{info['size_mb']} MB",
-            f"当前内核：{'支持' if engine_ok else '不支持（需要 Edge WebView2）'}",
+            trf('内置版本：{0}\u3000体积：{1} MB', info['version'], info['size_mb']),
+            trf('当前内核：{0}', '支持' if engine_ok else '不支持（需要 Edge WebView2）'),
         ]
         if not engine_ok:
             parts.append(
-                "当前使用 QtWebEngine，无法把本地 Ruffle 提供给网页；"
-                "请到「外观 → 渲染引擎」切换为 Edge WebView2 后重启。"
+                tr("当前使用 QtWebEngine，无法把本地 Ruffle 提供给网页；"
+                "请到「外观 → 渲染引擎」切换为 Edge WebView2 后重启。")
             )
         elif not self.check_flash.isChecked():
-            parts.append("当前为关闭状态：遇到 Flash 网站会提示需要安装 Flash。")
+            parts.append(tr("当前为关闭状态：遇到 Flash 网站会提示需要安装 Flash。"))
         else:
-            parts.append("当前为开启状态：网页里的 Flash 会自动用 Ruffle 运行。")
+            parts.append(tr("当前为开启状态：网页里的 Flash 会自动用 Ruffle 运行。"))
         self.lbl_flash.setText("　｜　".join(parts))
 
     def _open_flash_test(self) -> None:
@@ -1050,7 +1062,7 @@ class SettingsDialog(XPDialog):
             except Exception:
                 pass
         QMessageBox.information(
-            self, APP_NAME, f"请手动打开测试页面：\n{url}\n\n点击页面里的「开始游戏」即可。"
+            self, APP_NAME, trf('请手动打开测试页面：\n{0}\n\n点击页面里的「开始游戏」即可。', url)
         )
 
     def _open_ad_rules(self) -> None:
@@ -1085,7 +1097,7 @@ class SettingsDialog(XPDialog):
 
     def _pick_accent(self) -> None:
         initial = QColor(self._accent_color or "#0B5FE6")
-        color = QColorDialog.getColor(initial, self, "选择边框颜色")
+        color = QColorDialog.getColor(initial, self, tr("选择边框颜色"))
         if not color.isValid():
             return
         self._accent_color = color.name()
@@ -1155,7 +1167,7 @@ class SettingsDialog(XPDialog):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
 
-        self.lbl_engine_summary = QLabel("正在检测…")
+        self.lbl_engine_summary = QLabel(tr("正在检测…"))
         self.lbl_engine_summary.setWordWrap(True)
         font = self.lbl_engine_summary.font()
         font.setBold(True)
@@ -1164,7 +1176,7 @@ class SettingsDialog(XPDialog):
 
         self.engine_tree = QTreeWidget(page)
         self.engine_tree.setColumnCount(3)
-        self.engine_tree.setHeaderLabels(["检测项目", "状态", "说明"])
+        self.engine_tree.setHeaderLabels([tr("检测项目"), tr("状态"), tr("说明")])
         self.engine_tree.setRootIsDecorated(False)
         self.engine_tree.setUniformRowHeights(True)
         self.engine_tree.setMinimumHeight(220)
@@ -1182,29 +1194,29 @@ class SettingsDialog(XPDialog):
         layout.addWidget(self.engine_progress)
 
         row = QHBoxLayout()
-        self.btn_webview_fix = QPushButton("下载并安装 WebView2 运行时(&D)")
+        self.btn_webview_fix = QPushButton(tr("下载并安装 WebView2 运行时(&D)"))
         self.btn_webview_fix.setToolTip(
-            "从微软官方下载 WebView2 引导安装器并运行（约 2 MB，需要联网）"
+            tr("从微软官方下载 WebView2 引导安装器并运行（约 2 MB，需要联网）")
         )
         row.addWidget(self.btn_webview_fix)
-        self.btn_engine_recheck = QPushButton("重新检测(&R)")
+        self.btn_engine_recheck = QPushButton(tr("重新检测(&R)"))
         row.addWidget(self.btn_engine_recheck)
-        self.btn_webview_page = QPushButton("打开官方下载页(&P)")
+        self.btn_webview_page = QPushButton(tr("打开官方下载页(&P)"))
         row.addWidget(self.btn_webview_page)
         row.addStretch(1)
         layout.addLayout(row)
 
         row2 = QHBoxLayout()
-        self.btn_engine_copy = QPushButton("复制诊断报告(&C)")
-        self.btn_engine_save = QPushButton("保存诊断报告(&S)...")
+        self.btn_engine_copy = QPushButton(tr("复制诊断报告(&C)"))
+        self.btn_engine_save = QPushButton(tr("保存诊断报告(&S)..."))
         row2.addWidget(self.btn_engine_copy)
         row2.addWidget(self.btn_engine_save)
         row2.addStretch(1)
         layout.addLayout(row2)
 
         hint = QLabel(
-            "说明：本程序使用 Edge WebView2 内核渲染网页。若系统缺少 WebView2 运行时，"
-            "网页将无法显示，可点上面的按钮一键下载安装（安装过程由微软官方程序完成）。"
+            tr("说明：本程序使用 Edge WebView2 内核渲染网页。若系统缺少 WebView2 运行时，"
+            "网页将无法显示，可点上面的按钮一键下载安装（安装过程由微软官方程序完成）。")
         )
         hint.setWordWrap(True)
         hint.setProperty("role", "hint")
@@ -1227,7 +1239,7 @@ class SettingsDialog(XPDialog):
         self._engine_checks = checks
         self.engine_tree.clear()
         colors = {OK: QColor("#1E7B34"), WARN: QColor("#8A6A00"), BAD: QColor("#B02A1E")}
-        texts = {OK: "正常", WARN: "注意", BAD: "异常"}
+        texts = {OK: tr("正常"), WARN: tr("注意"), BAD: tr("异常")}
         for item in checks:
             node = QTreeWidgetItem([item.title, texts.get(item.level, "?"), item.detail])
             node.setForeground(1, colors.get(item.level, QColor("#000000")))
@@ -1250,8 +1262,8 @@ class SettingsDialog(XPDialog):
         answer = QMessageBox.question(
             self,
             APP_NAME,
-            "将从微软官方下载 WebView2 引导安装器（约 2 MB）并运行。\n\n"
-            "安装过程由微软的安装程序完成，可能需要管理员确认。是否继续？",
+            tr("将从微软官方下载 WebView2 引导安装器（约 2 MB）并运行。\n\n"
+            "安装过程由微软的安装程序完成，可能需要管理员确认。是否继续？"),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.Yes,
         )
@@ -1260,7 +1272,7 @@ class SettingsDialog(XPDialog):
 
         self.engine_progress.setVisible(True)
         self.engine_progress.setRange(0, 0)
-        self.engine_progress.setFormat("正在下载…")
+        self.engine_progress.setFormat(tr("正在下载…"))
         self.btn_webview_fix.setEnabled(False)
 
         downloader = RuntimeDownloader(self)
@@ -1271,29 +1283,29 @@ class SettingsDialog(XPDialog):
                 self.engine_progress.setRange(0, 100)
                 self.engine_progress.setValue(int(received * 100 / total))
                 self.engine_progress.setFormat(
-                    f"正在下载… {received / 1048576:.1f} / {total / 1048576:.1f} MB"
+                    trf('正在下载… {0:.1f} / {1:.1f} MB', received / 1048576, total / 1048576)
                 )
             else:
-                self.engine_progress.setFormat(f"正在下载… {received // 1024} KB")
+                self.engine_progress.setFormat(trf('正在下载… {0} KB', received // 1024))
 
         def on_finished(path: str) -> None:
             self._downloader = None
             self.engine_progress.setRange(0, 100)
             self.engine_progress.setValue(100)
-            self.engine_progress.setFormat("下载完成，正在启动安装程序…")
+            self.engine_progress.setFormat(tr("下载完成，正在启动安装程序…"))
             ok, error = run_installer(path)
             if not ok:
                 self.engine_progress.setVisible(False)
                 QMessageBox.warning(
                     self, APP_NAME,
-                    f"无法启动安装程序：{error}\n\n可点「打开官方下载页」手动下载。",
+                    trf('无法启动安装程序：{0}\n\n可点「打开官方下载页」手动下载。', error),
                 )
                 open_download_page()
             else:
                 QMessageBox.information(
                     self, APP_NAME,
-                    "已启动 WebView2 安装程序。\n\n"
-                    "请按微软的安装向导完成安装（可能需要管理员确认），完成后回到这里点「重新检测」。",
+                    tr("已启动 WebView2 安装程序。\n\n"
+                    "请按微软的安装向导完成安装（可能需要管理员确认），完成后回到这里点「重新检测」。"),
                 )
             self.engine_progress.setVisible(False)
             self._refresh_engine_checks()
@@ -1304,7 +1316,7 @@ class SettingsDialog(XPDialog):
             self._refresh_engine_checks()
             answer2 = QMessageBox.question(
                 self, APP_NAME,
-                f"下载失败：{message}\n\n是否改为打开官方下载页面手动安装？",
+                trf('下载失败：{0}\n\n是否改为打开官方下载页面手动安装？', message),
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes,
             )
             if answer2 == QMessageBox.Yes:
@@ -1327,26 +1339,30 @@ class SettingsDialog(XPDialog):
         clipboard = QApplication.clipboard()
         if clipboard is not None:
             clipboard.setText(text)
-        QMessageBox.information(self, APP_NAME, "诊断报告已复制到剪贴板。")
+        QMessageBox.information(self, APP_NAME, tr("诊断报告已复制到剪贴板。"))
 
     def _save_engine_report(self) -> None:
         from .webview2doctor import report_text, save_report
 
         path, _selected = QFileDialog.getSaveFileName(
-            self, "保存诊断报告", str(Path.home() / "lite-browser-诊断报告.txt"),
-            "文本文件 (*.txt)",
+            self, tr("保存诊断报告"), str(Path.home() / tr("lite-browser-诊断报告.txt")),
+            tr("文本文件 (*.txt)"),
         )
         if not path:
             return
         text = report_text(getattr(self, "_engine_checks", []))
         if save_report(text, Path(path)):
-            QMessageBox.information(self, APP_NAME, f"已保存到：\n{path}")
+            QMessageBox.information(self, APP_NAME, trf('已保存到：\n{0}', path))
         else:
-            QMessageBox.warning(self, APP_NAME, "保存失败，请换个位置再试。")
+            QMessageBox.warning(self, APP_NAME, tr("保存失败，请换个位置再试。"))
 
     # -- 取值 / 赋值 ------------------------------------------------------ #
     def _load_values(self) -> None:
         theme_index = self.combo_theme.findData(str(self.config.get("ui_theme") or theme.DEFAULT_THEME))
+        language_index = self.combo_language.findData(
+            i18n.normalize_language(str(self.config.get("ui_language") or ""))
+        )
+        self.combo_language.setCurrentIndex(max(0, language_index))
         self.combo_theme.setCurrentIndex(max(0, theme_index))
         mode_index = self.combo_mode.findData(str(self.config.get("ui_mode") or "light"))
         self.combo_mode.setCurrentIndex(max(0, mode_index))
@@ -1458,6 +1474,18 @@ class SettingsDialog(XPDialog):
         self._preview_theme()
         self._mark_dirty()
 
+    def _on_language_changed(self, *_args) -> None:
+        """切换界面语言：立即写入配置，重启后整体生效。"""
+        code = str(self.combo_language.currentData() or i18n.DEFAULT_LANGUAGE)
+        i18n.set_language(code)          # 让随后新建的对话框立刻用新语言
+        self.config.set("ui_language", code)
+        self._mark_dirty()
+        name = i18n.language_name(code)
+        QMessageBox.information(
+            self, APP_NAME,
+            trf("界面语言已切换为 {0}。\n菜单与对话框将在重新启动程序后全部生效。", name),
+        )
+
     def _mark_dirty(self, *_args) -> None:
         self.btn_apply.setEnabled(True)
 
@@ -1495,6 +1523,8 @@ class SettingsDialog(XPDialog):
             "history_keep_days": int(self.combo_keep.currentData() or 0),
             "incognito": self.check_incognito.isChecked(),
             "ui_theme": self.combo_theme.currentData() or theme.DEFAULT_THEME,
+            "ui_language": self.combo_language.currentData()
+            or i18n.DEFAULT_LANGUAGE,
             "ui_mode": self.combo_mode.currentData() or "light",
             "ui_accent": self._accent(),
             "suspend_background_tabs": self.check_suspend.isChecked(),
@@ -1539,7 +1569,7 @@ class BookmarkEditDialog(XPDialog):
     ) -> None:
         super().__init__(
             parent,
-            title="编辑书签" if editing else "添加收藏",
+            title=tr("编辑书签") if editing else tr("添加收藏"),
             icon_name="star_add",
         )
         self.setMinimumWidth(420)
@@ -1551,13 +1581,13 @@ class BookmarkEditDialog(XPDialog):
         form.setSpacing(8)
         self.edit_name = QLineEdit(title)
         self.edit_url = QLineEdit(url)
-        form.addRow("名称(N)：", self.edit_name)
-        form.addRow("地址(U)：", self.edit_url)
+        form.addRow(tr("名称(N)："), self.edit_name)
+        form.addRow(tr("地址(U)："), self.edit_url)
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
-        buttons.button(QDialogButtonBox.Ok).setText("确定")
-        buttons.button(QDialogButtonBox.Cancel).setText("取消")
+        buttons.button(QDialogButtonBox.Ok).setText(tr("确定"))
+        buttons.button(QDialogButtonBox.Cancel).setText(tr("取消"))
         buttons.accepted.connect(self._on_ok)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons, 0, Qt.AlignRight)
@@ -1565,7 +1595,7 @@ class BookmarkEditDialog(XPDialog):
 
     def _on_ok(self) -> None:
         if not self.edit_url.text().strip():
-            QMessageBox.warning(self, APP_NAME, "请填写书签地址。")
+            QMessageBox.warning(self, APP_NAME, tr("请填写书签地址。"))
             return
         self.accept()
 
@@ -1577,7 +1607,7 @@ class BookmarkManagerDialog(XPDialog):
     """整理收藏夹。"""
 
     def __init__(self, store, parent: QWidget | None = None, open_callback=None) -> None:
-        super().__init__(parent, title="整理收藏夹", icon_name="bookmarks")
+        super().__init__(parent, title=tr("整理收藏夹"), icon_name="bookmarks")
         self.store = store
         self.open_callback = open_callback
         self.setMinimumSize(560, 400)
@@ -1585,11 +1615,11 @@ class BookmarkManagerDialog(XPDialog):
         layout = QVBoxLayout(self.body)
         layout.setContentsMargins(12, 12, 12, 10)
         layout.setSpacing(8)
-        layout.addWidget(QLabel("收藏夹中的书签："))
+        layout.addWidget(QLabel(tr("收藏夹中的书签：")))
 
         self.tree = QTreeWidget(self)
         self.tree.setColumnCount(2)
-        self.tree.setHeaderLabels(["名称", "地址"])
+        self.tree.setHeaderLabels([tr("名称"), tr("地址")])
         self.tree.setRootIsDecorated(False)
         self.tree.setAlternatingRowColors(False)
         self.tree.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -1600,18 +1630,18 @@ class BookmarkManagerDialog(XPDialog):
         layout.addWidget(self.tree, 1)
 
         row = QHBoxLayout()
-        self.btn_open = QPushButton("打开(O)")
-        self.btn_edit = QPushButton("编辑(E)")
-        self.btn_remove = QPushButton("删除(D)")
-        self.btn_up = QPushButton("上移(U)")
-        self.btn_down = QPushButton("下移(W)")
+        self.btn_open = QPushButton(tr("打开(O)"))
+        self.btn_edit = QPushButton(tr("编辑(E)"))
+        self.btn_remove = QPushButton(tr("删除(D)"))
+        self.btn_up = QPushButton(tr("上移(U)"))
+        self.btn_down = QPushButton(tr("下移(W)"))
         for button in (self.btn_open, self.btn_edit, self.btn_remove):
             row.addWidget(button)
         row.addSpacing(16)
         row.addWidget(self.btn_up)
         row.addWidget(self.btn_down)
         row.addStretch(1)
-        self.btn_close = QPushButton("关闭")
+        self.btn_close = QPushButton(tr("关闭"))
         row.addWidget(self.btn_close)
         layout.addLayout(row)
 
@@ -1673,7 +1703,7 @@ class BookmarkManagerDialog(XPDialog):
         answer = QMessageBox.question(
             self,
             APP_NAME,
-            f"确定要删除书签“{item['title']}”吗？",
+            trf('确定要删除书签“{0}”吗？', item['title']),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -1698,7 +1728,7 @@ class AdRulesDialog(XPDialog):
     """管理用户手动标记的广告屏蔽规则。"""
 
     def __init__(self, store, parent: QWidget | None = None, navigate=None) -> None:
-        super().__init__(parent, title="广告屏蔽规则", icon_name="warn")
+        super().__init__(parent, title=tr("广告屏蔽规则"), icon_name="warn")
         self.store = store
         self.navigate = navigate
         self.setMinimumSize(640, 480)
@@ -1718,7 +1748,7 @@ class AdRulesDialog(XPDialog):
 
         self.tree = QTreeWidget(self)
         self.tree.setColumnCount(4)
-        self.tree.setHeaderLabels(["网站", "选择器", "添加时间", "备注"])
+        self.tree.setHeaderLabels([tr("网站"), tr("选择器"), tr("添加时间"), tr("备注")])
         self.tree.setRootIsDecorated(False)
         self.tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.tree.setUniformRowHeights(True)
@@ -1732,23 +1762,23 @@ class AdRulesDialog(XPDialog):
         self.tree.setColumnWidth(3, 100)
         layout.addWidget(self.tree, 1)
 
-        self.box_popups = QCheckBox("拦截网页自动弹出的窗口（非用户点击触发）")
+        self.box_popups = QCheckBox(tr("拦截网页自动弹出的窗口（非用户点击触发）"))
         self.box_popups.setChecked(bool(store.block_popups))
         self.box_popups.toggled.connect(self._on_popup_toggled)
         layout.addWidget(self.box_popups)
 
         row = QHBoxLayout()
-        self.btn_goto = QPushButton("打开该网站(&O)")
+        self.btn_goto = QPushButton(tr("打开该网站(&O)"))
         self.btn_goto.clicked.connect(self._open_selected_site)
         row.addWidget(self.btn_goto)
-        self.btn_remove = QPushButton("删除所选(&D)")
+        self.btn_remove = QPushButton(tr("删除所选(&D)"))
         self.btn_remove.clicked.connect(self._remove_selected)
         row.addWidget(self.btn_remove)
-        self.btn_clear = QPushButton("清空全部(&C)")
+        self.btn_clear = QPushButton(tr("清空全部(&C)"))
         self.btn_clear.clicked.connect(self._clear_all)
         row.addWidget(self.btn_clear)
         row.addStretch(1)
-        self.btn_close = QPushButton("关闭")
+        self.btn_close = QPushButton(tr("关闭"))
         self.btn_close.clicked.connect(self.accept)
         row.addWidget(self.btn_close)
         layout.addLayout(row)
@@ -1769,7 +1799,7 @@ class AdRulesDialog(XPDialog):
             self.tree.addTopLevelItem(node)
         count = len(self.store.rules)
         domains = len(self.store.domains())
-        self.lbl_count.setText(f"共 {count} 条规则，覆盖 {domains} 个网站")
+        self.lbl_count.setText(trf('共 {0} 条规则，覆盖 {1} 个网站', count, domains))
 
     def _selected_rules(self) -> list:
         rules = []
@@ -1801,7 +1831,7 @@ class AdRulesDialog(XPDialog):
         if not self.store.rules:
             return
         answer = QMessageBox.question(
-            self, APP_NAME, f"确定要清空全部 {len(self.store.rules)} 条广告屏蔽规则吗？",
+            self, APP_NAME, trf('确定要清空全部 {0} 条广告屏蔽规则吗？', len(self.store.rules)),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         )
         if answer == QMessageBox.Yes:
@@ -1813,7 +1843,7 @@ class BlocklistDialog(XPDialog):
     """管理可疑网址的黑名单 / 白名单（本地启发式规则的基础名单）。"""
 
     def __init__(self, manager, parent: QWidget | None = None) -> None:
-        super().__init__(parent, title="可疑网址名单", icon_name="warn")
+        super().__init__(parent, title=tr("可疑网址名单"), icon_name="warn")
         self.manager = manager
         self.setMinimumSize(520, 460)
 
@@ -1822,25 +1852,25 @@ class BlocklistDialog(XPDialog):
         layout.setSpacing(8)
 
         tip = QLabel(
-            "命中黑名单的网址会被直接拦截并显示警告页；"
+            tr("命中黑名单的网址会被直接拦截并显示警告页；"
             "白名单中的域名永远不会被拦截（包括启发式规则）。\n"
-            "规则支持 example.com 与 *.example.com 两种写法。"
+            "规则支持 example.com 与 *.example.com 两种写法。")
         )
         tip.setWordWrap(True)
         layout.addWidget(tip)
 
         lists = QHBoxLayout()
 
-        blocked_box = QGroupBox("黑名单（拦截）")
+        blocked_box = QGroupBox(tr("黑名单（拦截）"))
         blocked_layout = QVBoxLayout(blocked_box)
         self.blocked_tree = QTreeWidget()
-        self.blocked_tree.setHeaderLabels(["域名"])
+        self.blocked_tree.setHeaderLabels([tr("域名")])
         self.blocked_tree.setRootIsDecorated(False)
         blocked_layout.addWidget(self.blocked_tree)
         blocked_row = QHBoxLayout()
-        add_blocked = QPushButton("添加(&A)...")
+        add_blocked = QPushButton(tr("添加(&A)..."))
         add_blocked.clicked.connect(lambda: self._add(True))
-        remove_blocked = QPushButton("移除(&R)")
+        remove_blocked = QPushButton(tr("移除(&R)"))
         remove_blocked.clicked.connect(lambda: self._remove(True))
         blocked_row.addWidget(add_blocked)
         blocked_row.addWidget(remove_blocked)
@@ -1848,16 +1878,16 @@ class BlocklistDialog(XPDialog):
         blocked_layout.addLayout(blocked_row)
         lists.addWidget(blocked_box)
 
-        allowed_box = QGroupBox("白名单（放行）")
+        allowed_box = QGroupBox(tr("白名单（放行）"))
         allowed_layout = QVBoxLayout(allowed_box)
         self.allowed_tree = QTreeWidget()
-        self.allowed_tree.setHeaderLabels(["域名"])
+        self.allowed_tree.setHeaderLabels([tr("域名")])
         self.allowed_tree.setRootIsDecorated(False)
         allowed_layout.addWidget(self.allowed_tree)
         allowed_row = QHBoxLayout()
-        add_allowed = QPushButton("添加(&D)...")
+        add_allowed = QPushButton(tr("添加(&D)..."))
         add_allowed.clicked.connect(lambda: self._add(False))
-        remove_allowed = QPushButton("移除(&M)")
+        remove_allowed = QPushButton(tr("移除(&M)"))
         remove_allowed.clicked.connect(lambda: self._remove(False))
         allowed_row.addWidget(add_allowed)
         allowed_row.addWidget(remove_allowed)
@@ -1869,7 +1899,7 @@ class BlocklistDialog(XPDialog):
 
         row = QHBoxLayout()
         row.addStretch(1)
-        close = QPushButton("关闭")
+        close = QPushButton(tr("关闭"))
         close.clicked.connect(self.accept)
         row.addWidget(close)
         layout.addLayout(row)
@@ -1888,7 +1918,7 @@ class BlocklistDialog(XPDialog):
         from PySide6.QtWidgets import QInputDialog
 
         text, ok = QInputDialog.getText(
-            self, "添加域名", "域名（例如 bad-site.com 或 *.bad-site.com）："
+            self, tr("添加域名"), tr("域名（例如 bad-site.com 或 *.bad-site.com）：")
         )
         if not ok or not text.strip():
             return

@@ -10,6 +10,7 @@ from typing import Any
 from PySide6.QtCore import QObject, Signal
 
 from .crypto import DataVault
+from .i18n import tr
 
 #: 首次运行时预置的书签
 SEED_BOOKMARKS: list[tuple[str, str]] = [
@@ -68,8 +69,9 @@ class BookmarkStore(QObject):
         first_run = not self.blob_path.exists() and not self.legacy_path.exists()
         if not items and first_run:
             now = time.time()
+            # 默认书签按当前界面语言生成（英文环境下列表也是英文）
             items = [
-                {"title": title, "url": url, "added": now}
+                {"title": tr(title), "url": url, "added": now}
                 for title, url in SEED_BOOKMARKS
             ]
         self._items = items

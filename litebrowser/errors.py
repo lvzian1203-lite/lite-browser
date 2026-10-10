@@ -10,68 +10,70 @@ import html as _html
 import json
 from typing import Optional
 
+from .i18n import tr, trf, tr_html
+
 #: 常见 HTTP 状态码的中文说明（负数是网络层错误，与 WebView2 的 WebErrorStatus 对应）
 STATUS_TEXT = {
-    400: "请求无效",
-    401: "需要身份验证",
-    403: "拒绝访问",
-    404: "找不到页面",
-    405: "方法不被允许",
-    408: "请求超时",
-    410: "页面已被删除",
-    429: "请求过于频繁",
-    451: "因法律原因不可用",
-    500: "服务器内部错误",
-    501: "服务器不支持该请求",
-    502: "网关错误",
-    503: "服务暂时不可用",
-    504: "网关超时",
-    505: "HTTP 版本不受支持",
-    520: "服务器返回未知错误",
+    400: tr("请求无效"),
+    401: tr("需要身份验证"),
+    403: tr("拒绝访问"),
+    404: tr("找不到页面"),
+    405: tr("方法不被允许"),
+    408: tr("请求超时"),
+    410: tr("页面已被删除"),
+    429: tr("请求过于频繁"),
+    451: tr("因法律原因不可用"),
+    500: tr("服务器内部错误"),
+    501: tr("服务器不支持该请求"),
+    502: tr("网关错误"),
+    503: tr("服务暂时不可用"),
+    504: tr("网关超时"),
+    505: tr("HTTP 版本不受支持"),
+    520: tr("服务器返回未知错误"),
 }
 
 #: WebView2 WebErrorStatus 数值 -> 说明（-N 表示第 N 个网络错误）
 WEBVIEW2_ERRORS = {
-    0: "未知错误",
-    1: "证书中的主机名不正确",
-    2: "证书已过期",
-    3: "客户端证书有错误",
-    4: "证书已被吊销",
-    5: "证书无效",
-    6: "无法访问服务器",
-    7: "连接超时",
-    8: "服务器返回无效响应",
-    9: "连接被中止",
-    10: "连接被重置",
-    11: "连接已断开",
-    12: "无法建立连接",
-    13: "无法解析域名",
-    14: "操作已取消",
-    15: "重定向失败",
-    16: "未知错误",
-    17: "需要身份验证凭据",
-    18: "代理需要身份验证凭据",
+    0: tr("未知错误"),
+    1: tr("证书中的主机名不正确"),
+    2: tr("证书已过期"),
+    3: tr("客户端证书有错误"),
+    4: tr("证书已被吊销"),
+    5: tr("证书无效"),
+    6: tr("无法访问服务器"),
+    7: tr("连接超时"),
+    8: tr("服务器返回无效响应"),
+    9: tr("连接被中止"),
+    10: tr("连接被重置"),
+    11: tr("连接已断开"),
+    12: tr("无法建立连接"),
+    13: tr("无法解析域名"),
+    14: tr("操作已取消"),
+    15: tr("重定向失败"),
+    16: tr("未知错误"),
+    17: tr("需要身份验证凭据"),
+    18: tr("代理需要身份验证凭据"),
 }
 
 #: 网络错误的中文说明（用 -N 表示 WebView2 的第 N 个错误）
 STATUS_TEXT.update({-key: value for key, value in WEBVIEW2_ERRORS.items() if key})
-STATUS_TEXT[-100] = "可疑网址（本地规则命中）"
+STATUS_TEXT[-100] = tr("可疑网址（本地规则命中）")
 
 
 def describe(code: int, fallback: str = "") -> tuple[str, str]:
     """返回 (短标题, 详细说明)。"""
     mapped = STATUS_TEXT.get(code, "")
     if code in STATUS_TEXT:
-        if fallback and mapped in ("未知错误", "网络错误", "无法打开该页面"):
+        if fallback and mapped in (tr("未知错误"), tr("网络错误"), tr("无法打开该页面")):
             return fallback, ""
         return mapped, fallback
     if 400 <= code < 500:
-        return f"客户端错误 {code}", fallback
+        return trf('客户端错误 {0}', code), fallback
     if 500 <= code < 600:
-        return f"服务器错误 {code}", fallback
+        return trf('服务器错误 {0}', code), fallback
     if code < 0:
-        return fallback or "网络错误", ""
-    return fallback or "无法打开该页面", ""
+        return fallback or tr("网络错误"), ""
+    return fallback or tr("无法打开该页面"), ""
 
 
 def _escape(text: str) -> str:
@@ -110,7 +112,7 @@ def error_page(
 
     url_js = json.dumps(url or "", ensure_ascii=False)
 
-    return f"""<!doctype html>
+    return tr_html(f"""<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -317,14 +319,14 @@ def error_page(
 </script>
 </body>
 </html>
-"""
+""")
 
 
 def warning_page(
     url: str,
     reasons: list,
     *,
-    title: str = "该网址命中本地可疑规则",
+    title: str = tr("该网址命中本地可疑规则"),
     dark: bool = False,
     accent: str = "#C6362B",
     app_title: str = "lite browser",
@@ -344,11 +346,11 @@ def warning_page(
     title_text = _escape(title)
     disclaimer_text = _escape(disclaimer)
     items = "".join(
-        f"<li>{_escape(str(item))}</li>" for item in (reasons or ["该网址命中了本地可疑规则"])
+        f"<li>{_escape(str(item))}</li>" for item in (reasons or [tr("该网址命中了本地可疑规则")])
     )
     url_js = json.dumps(url or "", ensure_ascii=False)
 
-    return f"""<!doctype html>
+    return tr_html(f"""<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -423,7 +425,7 @@ def warning_page(
 </script>
 </body>
 </html>
-"""
+""")
 
 
 def is_error_code(code: int) -> bool:

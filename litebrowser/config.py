@@ -114,7 +114,8 @@ class Config(QObject):
         # 无痕浏览
         "incognito": False,
         # 界面主题
-        "ui_theme": "xp",                # xp | win98 | win7 | win81 | win10 | win11 | harmony | cat
+        "ui_theme": "xp",                # xp | win98 | win7 | win81 | win10 | harmony | cat
+        "ui_language": "zh_CN",          # zh_CN（中文简体）| en（English）
         "ui_mode": "light",              # light | dark
         "ui_accent": "",                 # 自定义边框颜色 #RRGGBB，空 = 用主题默认
         # 性能

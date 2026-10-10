@@ -25,10 +25,12 @@ from urllib.parse import unquote, urlsplit
 
 from PySide6.QtCore import QObject, Signal
 
+from .i18n import tr, trf
+
 #: 能力边界声明：所有面向用户的提示都必须带上它，避免把启发式规则说成"恶意网址库"
 DISCLAIMER = (
-    "本检测基于本地启发式规则，仅用于识别可疑 URL 特征，"
-    "不等同于恶意网址信誉数据库或杀毒软件。"
+    tr("本检测基于本地启发式规则，仅用于识别可疑 URL 特征，"
+    "不等同于恶意网址信誉数据库或杀毒软件。")
 )
 
 #: 命中即拦截（危险）
@@ -43,7 +45,7 @@ SENSITIVE_WORDS = (
     "login", "signin", "sign-in", "verify", "verification", "account", "password",
     "passwd", "secure", "security", "update", "confirm", "bank", "pay", "paypal",
     "wallet", "recharge", "gift", "free", "bonus", "lottery", "invoice",
-    "登录", "验证", "账户", "账号", "密码", "安全", "更新", "中奖", "红包", "支付",
+    tr("登录"), tr("验证"), tr("账户"), tr("账号"), tr("密码"), tr("安全"), tr("更新"), tr("中奖"), tr("红包"), tr("支付"),
 )
 
 #: 与敏感词组合时报警的高风险免费后缀
@@ -73,8 +75,8 @@ class CertificateInfo:
     @property
     def summary(self) -> str:
         if self.is_error:
-            return f"证书不受信任：{self.error}"
-        return f"证书有效（颁发者：{self.issuer or '未知'}）"
+            return trf('证书不受信任：{0}', self.error)
+        return trf('证书有效（颁发者：{0}）', self.issuer or '未知')
 
 
 @dataclass
@@ -192,7 +194,7 @@ class SecurityManager(QObject):
 
     def save(self) -> None:
         lines = [
-            "# lite browser 网址黑名单（每行一个域名，# 注释，! 表示白名单）",
+            tr("# lite browser 网址黑名单（每行一个域名，# 注释，! 表示白名单）"),
         ]
         lines += sorted(self._blocked)
         lines += ["!" + item for item in sorted(self._allowed)]
@@ -251,7 +253,7 @@ class SecurityManager(QObject):
 
         if self._in_blocklist(host):
             verdict.level = DANGER
-            verdict.reasons.append("该域名在您的黑名单中")
+            verdict.reasons.append(tr("该域名在您的黑名单中"))
             return verdict
 
         reasons: list[str] = []
@@ -266,7 +268,7 @@ class SecurityManager(QObject):
         # 1) userinfo 伪装：http://trusted.com@evil.com
         if "@" in (parts.netloc or ""):
             raise_level(DANGER)
-            reasons.append("网址中使用了 @ 伪装真实域名（常见钓鱼手法）")
+            reasons.append(tr("网址中使用了 @ 伪装真实域名（常见钓鱼手法）"))
 
         # 2) IP 直连 + 非标准端口
         try:
@@ -274,19 +276,19 @@ class SecurityManager(QObject):
             is_ip = True
             if not ip.is_private:
                 raise_level(WARN)
-                reasons.append("直接使用 IP 地址访问，而非域名")
+                reasons.append(tr("直接使用 IP 地址访问，而非域名"))
         except ValueError:
             is_ip = False
 
         port = parts.port
         if port and port not in (80, 443, 8080, 8443) and is_ip:
             raise_level(DANGER)
-            reasons.append(f"使用了非常规端口 {port}")
+            reasons.append(trf('使用了非常规端口 {0}', port))
 
         # 3) punycode 同形异义
         if "xn--" in host:
             raise_level(DANGER)
-            reasons.append("域名包含 punycode（可能是同形异义钓鱼域名）")
+            reasons.append(tr("域名包含 punycode（可能是同形异义钓鱼域名）"))
 
         # 4) 敏感词 + 非 https
         decoded = unquote(lowered)
@@ -295,43 +297,43 @@ class SecurityManager(QObject):
             if parts.scheme == "http":
                 raise_level(DANGER)
                 reasons.append(
-                    "网址包含敏感词（" + "、".join(hits[:3]) + "）且未使用 HTTPS 加密"
+                    tr("网址包含敏感词（") + "、".join(hits[:3]) + tr("）且未使用 HTTPS 加密")
                 )
             else:
                 raise_level(WARN)
-                reasons.append("网址包含敏感词：" + "、".join(hits[:3]))
+                reasons.append(tr("网址包含敏感词：") + "、".join(hits[:3]))
 
         # 5) 高风险后缀 + 敏感词
         if any(host.endswith(tld) for tld in RISKY_TLDS):
             if hits:
                 raise_level(DANGER)
-                reasons.append("高风险域名后缀与敏感词同时出现")
+                reasons.append(tr("高风险域名后缀与敏感词同时出现"))
             else:
                 raise_level(WARN)
-                reasons.append("该域名使用了较高风险的后缀")
+                reasons.append(tr("该域名使用了较高风险的后缀"))
 
         # 6) 子域名过多
         labels = host.split(".")
         if len(labels) >= 5:
             raise_level(WARN)
-            reasons.append(f"子域名层级过多（{len(labels)} 级），可能是随机生成的域名")
+            reasons.append(trf('子域名层级过多（{0} 级），可能是随机生成的域名', len(labels)))
 
         # 7) 连字符过多
         if len(labels) >= 2:
             main = labels[-2]
             if main.count("-") >= 3:
                 raise_level(WARN)
-                reasons.append("主域名中包含大量连字符")
+                reasons.append(tr("主域名中包含大量连字符"))
 
         # 8) 超长网址
         if len(url) > 320:
             raise_level(WARN)
-            reasons.append("网址异常冗长，可能隐藏真实跳转地址")
+            reasons.append(tr("网址异常冗长，可能隐藏真实跳转地址"))
 
         # 9) 十六进制 / 百分号编码的域名（把恶意域名藏起来）
         if re.search(r"%[0-9a-f]{2}", parts.netloc or "", re.I):
             raise_level(WARN)
-            reasons.append("域名中包含大量转义字符")
+            reasons.append(tr("域名中包含大量转义字符"))
 
         verdict.level = level
         verdict.reasons = reasons
@@ -346,11 +348,11 @@ class SecurityManager(QObject):
             info.severity = OK
             return info
         text = (info.error or "").lower()
-        if any(word in text for word in ("过期", "expired", "not yet", "尚未", "无效")):
+        if any(word in text for word in (tr("过期"), "expired", "not yet", tr("尚未"), tr("无效"))):
             info.severity = DANGER
-        elif any(word in text for word in ("证书名称", "名称不匹配", "mismatch", "主机名")):
+        elif any(word in text for word in (tr("证书名称"), tr("名称不匹配"), "mismatch", tr("主机名"))):
             info.severity = DANGER
-        elif any(word in text for word in ("自签名", "self-signed", "不受信任", "untrusted", "unknown authority")):
+        elif any(word in text for word in (tr("自签名"), "self-signed", tr("不受信任"), "untrusted", "unknown authority")):
             info.severity = DANGER
         else:
             info.severity = WARN
@@ -367,10 +369,10 @@ class SecurityManager(QObject):
         return text[:16].replace("T", " ") if "T" in text else text[:24]
 
     def allowed_hosts_text(self) -> str:
-        return "\n".join(self.allowed_domains()) or "（无）"
+        return "\n".join(self.allowed_domains()) or tr("（无）")
 
     def blocked_hosts_text(self) -> str:
-        return "\n".join(self.blocked_domains()) or "（无）"
+        return "\n".join(self.blocked_domains()) or tr("（无）")
 
 
 def security_icon(level: str) -> str:

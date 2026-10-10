@@ -27,6 +27,8 @@ from .netsec import SecurityManager
 from .performance import PerformanceManager
 from .widgets import StartupSplash
 
+from .i18n import apply_language_from_config, tr, trf
+
 log = logging.getLogger(__name__)
 
 
@@ -86,15 +88,15 @@ def _open_vault() -> DataVault | None:
         box = QMessageBox()
         box.setIcon(QMessageBox.Warning)
         box.setWindowTitle(APP_NAME)
-        box.setText("当前环境无法启用数据加密")
+        box.setText(tr("当前环境无法启用数据加密"))
         box.setInformativeText(
             "未找到 cryptography 加密库，本次运行中书签、历史记录与下载记录"
             "只能以明文保存，同一台电脑上的其他程序或用户可以读取这些内容。\n\n"
             "如需加密保护，请先安装后重新启动：\n"
             "    pip install cryptography"
         )
-        plain_button = box.addButton("继续使用明文(&C)", QMessageBox.AcceptRole)
-        box.addButton("退出(&Q)", QMessageBox.RejectRole)
+        plain_button = box.addButton(tr("继续使用明文(&C)"), QMessageBox.AcceptRole)
+        box.addButton(tr("退出(&Q)"), QMessageBox.RejectRole)
         box.setDefaultButton(plain_button)
         box.exec()
         if box.clickedButton() is not plain_button:
@@ -109,20 +111,20 @@ def _open_vault() -> DataVault | None:
     for _attempt in range(3):
         dialog = PasswordDialog(
             None,
-            title="输入加密口令",
+            title=tr("输入加密口令"),
             confirm=False,
-            prompt="lite browser 的数据已加密，请输入口令解锁：",
+            prompt=tr("lite browser 的数据已加密，请输入口令解锁："),
         )
         if dialog.exec() != QDialog.Accepted:
             break
         if vault.unlock(dialog.password()):
             return vault
-        QMessageBox.warning(None, APP_NAME, "口令不正确，请重试。")
+        QMessageBox.warning(None, APP_NAME, tr("口令不正确，请重试。"))
 
     QMessageBox.warning(
         None,
         APP_NAME,
-        "未能解锁加密数据，本次运行不会保存书签、历史记录与下载记录。",
+        tr("未能解锁加密数据，本次运行不会保存书签、历史记录与下载记录。"),
     )
     return None
 
@@ -139,9 +141,11 @@ def _run_env_report() -> int:
     from .webview2doctor import diagnose, report_text
 
     config = Config()
+    # 语言必须在创建任何界面文字之前定好
+    apply_language_from_config(config)
     engine_id = resolve_engine(str(config.get("engine") or "auto"))
     checks = diagnose(engine_id)
-    text = report_text(checks) + f"\n当前内核：{engine_id}\n"
+    text = report_text(checks) + trf('\n当前内核：{0}\n', engine_id)
 
     target = data_dir() / "env-report.txt"
     try:
@@ -160,7 +164,7 @@ def _run_env_report() -> int:
         if sys.stdout is not None:
             # 输出被重定向时改用 UTF-8，避免英文系统上中文报告编码失败
             configure_output()
-            sys.stdout.write(text + f"\n报告已保存：{target}\n")
+            sys.stdout.write(text + trf('\n报告已保存：{0}\n', target))
             written = True
     except Exception as lite_exc:
         log.debug("忽略异常：%s", lite_exc)
@@ -171,9 +175,8 @@ def _run_env_report() -> int:
 
             ctypes.windll.user32.MessageBoxW(
                 None,
-                f"环境自检完成，报告已保存到：\n{target}\n\n"
-                "如果网页打不开，可以把这份报告发给作者排查。",
-                f"{APP_NAME} 环境自检",
+                trf('环境自检完成，报告已保存到：\n{0}\n\n如果网页打不开，可以把这份报告发给作者排查。', target),
+                trf('{0} 环境自检', APP_NAME),
                 0x40,
             )
         except Exception as lite_exc:
@@ -193,6 +196,8 @@ def main(argv: list[str] | None = None) -> int:
     start_url = _take_start_url(argv)
 
     config = Config()
+    # 语言必须在创建任何界面文字之前定好
+    apply_language_from_config(config)
     engine_id = resolve_engine(str(config.get("engine") or "auto"))
     # QtWebEngine 必须在创建 QApplication 之前导入
     prepare_engine(engine_id)
@@ -240,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     # 3) 启动画面已经可见，此时开始预热 WebView2 环境：
     #    CLR 加载与环境创建与后面的界面构造并行进行，缩短引擎就绪时间
     if engine_id in (ENGINE_WEBVIEW2, "auto"):
-        splash.set_message("正在准备渲染引擎…")
+        splash.set_message(tr("正在准备渲染引擎…"))
         try:
             from .wv2engine import prewarm_environment
 
@@ -249,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
             log.debug("忽略异常：%s", lite_exc)
             pass
 
-    splash.set_message("正在解锁数据…")
+    splash.set_message(tr("正在解锁数据…"))
     data_root = data_dir()
     try:
         vault = _open_vault()
@@ -265,14 +270,14 @@ def main(argv: list[str] | None = None) -> int:
     # 读取返回空、写入被跳过，从而不会把数据写成明文。
     store_vault = vault if vault is not None else DataVault(data_root)
 
-    splash.set_message("正在读取书签与历史…")
+    splash.set_message(tr("正在读取书签与历史…"))
     bookmarks = BookmarkStore(store_vault, data_root)
     history = HistoryStore(store_vault, data_root)
     downloads = DownloadManager(config, store_vault, data_root)
     security = SecurityManager(config, data_root)
     performance = PerformanceManager(config)
 
-    splash.set_message("正在准备界面…")
+    splash.set_message(tr("正在准备界面…"))
     window = MainWindow(
         config,
         bookmarks,
@@ -288,7 +293,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # 5) 一次性应用调色板 + 样式表
     theme.apply_theme(app, spec)
-    splash.set_message("正在打开首页…")
+    splash.set_message(tr("正在打开首页…"))
 
     window.show()
     window.raise_()

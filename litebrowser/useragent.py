@@ -6,9 +6,11 @@
 
 from __future__ import annotations
 
+from .i18n import tr, trf
+
 #: 预设 UA（名称, 值）；值为空字符串表示使用内核默认
 UA_PRESETS: list[tuple[str, str]] = [
-    ("默认（跟随内核）", ""),
+    (tr("默认（跟随内核）"), ""),
     (
         "Windows · Chrome 131",
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -34,27 +36,27 @@ UA_PRESETS: list[tuple[str, str]] = [
         "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     ),
     (
-        "Android · 手机版",
+        tr("Android · 手机版"),
         "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
     ),
     (
-        "iPhone · 手机版",
+        tr("iPhone · 手机版"),
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) "
         "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1",
     ),
     (
-        "iPad · 平板版",
+        tr("iPad · 平板版"),
         "Mozilla/5.0 (iPad; CPU OS 18_1 like Mac OS X) AppleWebKit/605.1.15 "
         "(KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1",
     ),
     (
-        "微信内置浏览器",
+        tr("微信内置浏览器"),
         "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) "
         "Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 "
         "MicroMessenger/8.0.49.2600(0x2800313D) WeChat/arm64",
     ),
-    ("自定义（在下方输入）", "__custom__"),
+    (tr("自定义（在下方输入）"), "__custom__"),
 ]
 
 #: 移动端特征，用于给界面一些提示

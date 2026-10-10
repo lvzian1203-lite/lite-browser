@@ -33,6 +33,8 @@ from .config import APP_NAME, APP_VERSION, AUTHOR, COPYRIGHT, SEARCH_ENGINES
 from .videocheck import BILI_VIDEO
 from .widgets import XPDialog
 
+from .i18n import tr, trf, tr_text
+
 
 def _ruffle_text() -> str:
     """从实际文件读取 Ruffle 版本（打包后也能正确显示）。"""
@@ -76,15 +78,15 @@ def _shortcuts_table(window=None) -> str:
 
     if not rows:
         rows = [
-            ("Ctrl+T", "新建标签页"),
-            ("Ctrl+W", "关闭标签页"),
-            ("Ctrl+L", "定位地址栏"),
-            ("Ctrl+F", "页面内查找"),
+            ("Ctrl+T", tr("新建标签页")),
+            ("Ctrl+W", tr("关闭标签页")),
+            ("Ctrl+L", tr("定位地址栏")),
+            ("Ctrl+F", tr("页面内查找")),
         ]
 
     lines = [
         "<table cellspacing='0' cellpadding='4' width='100%'>",
-        "<tr><th align='left'>快捷键</th><th align='left'>功能</th></tr>",
+        tr("<tr><th align='left'>快捷键</th><th align='left'>功能</th></tr>"),
     ]
     for sequence, text in rows:
         lines.append(
@@ -106,14 +108,14 @@ def _engines_table(current: str = "") -> str:
     rows = "".join(
         f"<tr><td>{label}</td></tr>" for label in ENGINE_LABELS.values()
     )
-    note = f"<p>当前使用：<b>{ENGINE_LABELS.get(current, current or '自动选择')}</b></p>" if current else ""
+    note = trf('<p>当前使用：<b>{0}</b></p>', ENGINE_LABELS.get(current, current or '自动选择')) if current else ""
     return f"<table cellspacing='0' cellpadding='4' width='100%'>{rows}</table>{note}"
 
 
 def _search_engines() -> str:
     names = "、".join(item[1] if isinstance(item, (list, tuple)) and len(item) > 1 else str(item)
                      for item in (SEARCH_ENGINES or []))
-    return f"<p>内置搜索引擎：{names or '（见设置）'}</p>"
+    return trf('<p>内置搜索引擎：{0}</p>', names or '（见设置）')
 
 
 def _ua_presets() -> str:
@@ -121,23 +123,23 @@ def _ua_presets() -> str:
         from .useragent import UA_PRESETS
 
         names = [name for name, _value in UA_PRESETS]
-        return "<p>内置预设：" + "、".join(names) + "</p>"
+        return tr("<p>内置预设：") + "、".join(names) + "</p>"
     except Exception:
         return ""
 
 
 def _settings_pages() -> str:
     pages = [
-        ("常规", "主页与启动方式、默认搜索引擎、下载目录、缩放比例"),
-        ("外观", "UI 风格（XP/98/7/8.1/10）、深色浅色、自定义边框颜色、渲染引擎、工具栏、窗口边框"),
-        ("性能", "后台标签页挂起与等待时间、会话恢复、DNS 预解析、平滑滚动、图片加载、内存与缓存统计"),
-        ("网络", "Flash 兼容（Ruffle 无广告 Flash）、User-Agent 预设与自定义、"
-              "HTTPS 证书校验方式、可疑网址提示与名单管理"),
-        ("内核与环境", "WebView2 运行环境自动诊断（系统 / 运行时 / 组件文件 / .NET / 数据目录），"
-                    "缺什么点一下就能下载安装"),
-        ("隐私与安全", "广告与弹窗拦截、无痕浏览、历史记录与保留天数、"
-                    "数据加密与口令、Cookie 与缓存清理"),
-        ("关于", "版本、作者、当前渲染引擎与解码能力"),
+        (tr("常规"), tr("主页与启动方式、默认搜索引擎、下载目录、缩放比例")),
+        (tr("外观"), tr("UI 风格（XP/98/7/8.1/10）、深色浅色、自定义边框颜色、渲染引擎、工具栏、窗口边框")),
+        (tr("性能"), tr("后台标签页挂起与等待时间、会话恢复、DNS 预解析、平滑滚动、图片加载、内存与缓存统计")),
+        (tr("网络"), tr("Flash 兼容（Ruffle 无广告 Flash）、User-Agent 预设与自定义、"
+              "HTTPS 证书校验方式、可疑网址提示与名单管理")),
+        (tr("内核与环境"), tr("WebView2 运行环境自动诊断（系统 / 运行时 / 组件文件 / .NET / 数据目录），"
+                    "缺什么点一下就能下载安装")),
+        (tr("隐私与安全"), tr("广告与弹窗拦截、无痕浏览、历史记录与保留天数、"
+                    "数据加密与口令、Cookie 与缓存清理")),
+        (tr("关于"), tr("版本、作者、当前渲染引擎与解码能力")),
     ]
     items = "".join(f"<li><b>{name}</b>：{desc}</li>" for name, desc in pages)
     return f"<ul>{items}</ul>"
@@ -158,7 +160,7 @@ def sections(window=None, config=None) -> list[Topic]:
 
     return [
         Topic(
-            "start", "快速上手",
+            "start", tr("快速上手"),
             f"""
             <h3>{APP_NAME} {APP_VERSION}</h3>
             <p>一款用 Python 编写的轻量浏览器，界面为仿 Windows 经典风格，作者 <b>{AUTHOR}</b>。</p>
@@ -181,7 +183,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "home",
         ),
         Topic(
-            "tab", "标签页与导航",
+            "tab", tr("标签页与导航"),
             """
             <ul>
               <li><b>多标签页</b>：支持拖动排序、中键关闭、<code>Ctrl+Tab</code> 切换。</li>
@@ -199,7 +201,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "tab_new",
         ),
         Topic(
-            "bookmark", "书签（收藏夹）",
+            "bookmark", tr("书签（收藏夹）"),
             """
             <ul>
               <li><b>添加</b>：<code>Ctrl+D</code> 或工具栏星标按钮，可修改名称与地址。</li>
@@ -212,7 +214,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "star",
         ),
         Topic(
-            "download", "下载管理",
+            "download", tr("下载管理"),
             """
             <ul>
               <li><b>打开</b>：<code>Ctrl+J</code> 或「工具 → 下载管理」。</li>
@@ -229,7 +231,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "download",
         ),
         Topic(
-            "history", "历史记录",
+            "history", tr("历史记录"),
             """
             <ul>
               <li><b>打开</b>：<code>Ctrl+H</code> 或「工具 → 历史记录」。</li>
@@ -245,7 +247,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "history",
         ),
         Topic(
-            "incognito", "无痕浏览",
+            "incognito", tr("无痕浏览"),
             """
             <ul>
               <li><b>开关</b>：工具栏「无痕」按钮、<code>Ctrl+Shift+N</code>，
@@ -259,7 +261,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "incognito",
         ),
         Topic(
-            "crypto", "数据加密与解密",
+            "crypto", tr("数据加密与解密"),
             """
             <ul>
               <li><b>算法</b>：AES-256-GCM（带认证，防篡改），文件格式为
@@ -276,7 +278,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "lock",
         ),
         Topic(
-            "data", "Cookie 与缓存管理",
+            "data", tr("Cookie 与缓存管理"),
             """
             <ul>
               <li><b>入口</b>：<code>Ctrl+Shift+Del</code>、「工具 → Cookie 与缓存管理」，
@@ -293,7 +295,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "settings",
         ),
         Topic(
-            "saveprint", "网页保存与打印",
+            "saveprint", tr("网页保存与打印"),
             """
             <ul>
               <li><b>页面另存为</b>：<code>Ctrl+S</code>，可选三种格式 ——
@@ -308,7 +310,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "save",
         ),
         Topic(
-            "theme", "主题与界面自定义",
+            "theme", tr("主题与界面自定义"),
             f"""
             <ul>
               <li><b>{len(theme.THEME_ORDER)} 种 UI 风格</b>：「设置 → 外观 → 界面风格」，
@@ -327,7 +329,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "settings",
         ),
         Topic(
-            "perf", "性能与内存优化",
+            "perf", tr("性能与内存优化"),
             """
             <ul>
               <li><b>后台标签页自动挂起</b>：闲置超过设定时间（默认 10 分钟）的标签页
@@ -347,7 +349,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "settings",
         ),
         Topic(
-            "security", "安全：证书校验与可疑网址提示",
+            "security", tr("安全：证书校验与可疑网址提示"),
             """
             <ul>
               <li><b>连接状态指示</b>：地址栏左侧图标显示当前页面的<b>传输层</b>状态 ——
@@ -372,7 +374,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "warn",
         ),
         Topic(
-            "ua", "User-Agent（用户代理）",
+            "ua", tr("User-Agent（用户代理）"),
             f"""
             <ul>
               <li><b>位置</b>：「设置 → 网络 → User-Agent」。</li>
@@ -388,7 +390,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "globe",
         ),
         Topic(
-            "engine", "渲染引擎说明",
+            "engine", tr("渲染引擎说明"),
             f"""
             <p>程序内置两种 Chromium 内核，启动时自动选择，也可在
             「设置 → 外观 → 渲染引擎」强制指定（切换后需重启程序）。</p>
@@ -403,7 +405,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "globe",
         ),
         Topic(
-            "video", "视频播放（哔哩哔哩等）",
+            "video", tr("视频播放（哔哩哔哩等）"),
             f"""
             <p>程序内置两种内核，<b>只有 Edge WebView2 含 H.264/AAC 专有编解码器</b>，
             哔哩哔哩等站点依赖它们才能播放。</p>
@@ -428,7 +430,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "globe",
         ),
         Topic(
-            "env", "内核与环境诊断",
+            "env", tr("内核与环境诊断"),
             """
             <p>程序依赖系统的 <b>Edge WebView2 运行时</b>渲染网页。若它缺失或损坏，
             网页会打不开。为此提供了内置诊断工具：</p>
@@ -453,7 +455,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "settings",
         ),
         Topic(
-            "flash", "Flash 小游戏（无广告）",
+            "flash", tr("Flash 小游戏（无广告）"),
             f"""
             <p><b>先说结论</b>：Adobe Flash Player 已经在 2020 年底停止支持，
             Chromium 内核（含本程序使用的 WebView2）从 88 版起
@@ -484,7 +486,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "globe",
         ),
         Topic(
-            "adblock", "广告与弹窗拦截",
+            "adblock", tr("广告与弹窗拦截"),
             """
             <p>广告屏蔽分两部分：<b>自动拦截弹窗</b> 与 <b>手动标记要屏蔽的元素</b>。</p>
             <ul>
@@ -508,13 +510,13 @@ def sections(window=None, config=None) -> list[Topic]:
             "warn",
         ),
         Topic(
-            "shortcut", "快捷键一览",
-            "<p>下表由程序当前注册的快捷键自动生成，功能增删后会自动同步。</p>"
+            "shortcut", tr("快捷键一览"),
+            tr("<p>下表由程序当前注册的快捷键自动生成，功能增删后会自动同步。</p>")
             + _shortcuts_table(window),
             "find",
         ),
         Topic(
-            "faq", "常见问题",
+            "faq", tr("常见问题"),
             """
             <dl>
               <dt>为什么有些视频网站提示「不支持 HTML5 播放器」？</dt>
@@ -544,7 +546,7 @@ def sections(window=None, config=None) -> list[Topic]:
             "info",
         ),
         Topic(
-            "about", "关于与版权",
+            "about", tr("关于与版权"),
             f"""
             <ul>
               <li>名称：<b>{APP_NAME}</b></li>
@@ -576,7 +578,7 @@ class HelpDialog(XPDialog):
         config=None,
         initial: str = "start",
     ) -> None:
-        super().__init__(parent, title=f"{APP_NAME} 使用帮助", icon_name="info")
+        super().__init__(parent, title=trf('{0} 使用帮助', APP_NAME), icon_name="info")
         self.window_ref = window
         self.config = config
         self._topics = sections(window, config)
@@ -587,8 +589,7 @@ class HelpDialog(XPDialog):
         layout.setSpacing(8)
 
         header = QLabel(
-            f"<b>{APP_NAME} {APP_VERSION}</b>　作者：{AUTHOR}　"
-            f"<span style='color:#888'>（本帮助随功能更新同步维护）</span>"
+            trf("<b>{0} {1}</b>\u3000作者：{2}\u3000<span style='color:#888'>（本帮助随功能更新同步维护）</span>", APP_NAME, APP_VERSION, AUTHOR)
         )
         layout.addWidget(header)
 
@@ -615,11 +616,11 @@ class HelpDialog(XPDialog):
         layout.addWidget(splitter, 1)
 
         row = QHBoxLayout()
-        self.search_hint = QLabel("提示：按 F1 可随时打开本帮助")
+        self.search_hint = QLabel(tr("提示：按 F1 可随时打开本帮助"))
         self.search_hint.setProperty("role", "hint")
         row.addWidget(self.search_hint)
         row.addStretch(1)
-        close = QPushButton("关闭")
+        close = QPushButton(tr("关闭"))
         close.setDefault(True)
         close.clicked.connect(self.accept)
         row.addWidget(close)
@@ -651,6 +652,9 @@ class HelpDialog(XPDialog):
 
     def _render(self, topic: Topic) -> str:
         t = theme.current()
+        # 帮助正文很长，走"整行短语翻译"：英文环境下逐行查表替换，
+        # 没翻译到的行保持中文，界面不会因此出错
+        body = tr_text(topic.body)
         return f"""
         <html><head><meta charset="utf-8">
         <style>
@@ -667,7 +671,7 @@ class HelpDialog(XPDialog):
           dt {{ font-weight: bold; margin-top: 10px; }}
           dd {{ margin: 2px 0 8px 18px; color: {t.text_dim}; }}
           a {{ color: {t.highlight}; }}
-        </style></head><body>{topic.body}</body></html>
+        </style></head><body>{body}</body></html>
         """
 
 

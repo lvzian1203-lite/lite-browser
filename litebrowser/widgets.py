@@ -41,6 +41,8 @@ from PySide6.QtWidgets import (
 from . import icons, theme
 from .config import APP_NAME
 
+from .i18n import tr, trf
+
 #: 是否使用圆角 + 半透明窗口（仿 XP 的圆角标题栏）
 ROUNDED_CORNERS = True
 #: 可拖动改变大小的边缘宽度
@@ -443,11 +445,11 @@ class LunaTitleBar(QWidget):
 
     def _show_system_menu(self, pos: QPoint) -> None:
         menu = QMenu(self)
-        act_restore = menu.addAction("还原(R)")
-        act_min = menu.addAction("最小化(N)")
-        act_max = menu.addAction("最大化(X)")
+        act_restore = menu.addAction(tr("还原(R)"))
+        act_min = menu.addAction(tr("最小化(N)"))
+        act_max = menu.addAction(tr("最大化(X)"))
         menu.addSeparator()
-        act_close = menu.addAction("关闭(C)")
+        act_close = menu.addAction(tr("关闭(C)"))
 
         maximized = self._window.isMaximized()
         act_restore.setEnabled(maximized)
@@ -756,7 +758,7 @@ class StartupSplash(QWidget):
         self._app_name = app_name
         self._version = version
         self._author = author
-        self._message = "正在启动…"
+        self._message = tr("正在启动…")
         self._progress = 6
         self._icon = icons.app_icon()
         self._timer = QTimer(self)
@@ -845,7 +847,7 @@ class StartupSplash(QWidget):
         p.setPen(QColor(spec.text_dim))
         p.drawText(QRectF(text_left, icon_rect.top() + 28, rect.width() - text_left - 20, 24),
                    Qt.AlignVCenter | Qt.AlignLeft,
-                   f"版本 {self._version}    作者：{self._author}")
+                   trf('版本 {0}    作者：{1}', self._version, self._author))
 
         # 进度条
         bar_rect = QRectF(rect.left() + 24, rect.bottom() - 46, rect.width() - 48, 12)
@@ -948,7 +950,7 @@ class ToastNotification(QWidget):
         close = QToolButton(card)
         close.setText("✕")
         close.setCursor(Qt.ArrowCursor)
-        close.setToolTip("关闭")
+        close.setToolTip(tr("关闭"))
         close.clicked.connect(self.close)
         row.addWidget(close, 0, Qt.AlignTop)
 
